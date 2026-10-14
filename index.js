@@ -521,8 +521,13 @@ app.get('/auth/sso', async (req, res) => {
     if (!token || !process.env.SSO_SECRET) return res.redirect('/login?error=no_token');
     try {
         const [payload64, sig] = token.split('.');
-        const expected = crypto.createHmac('sha256', process.env.SSO_SECRET).update(payload64).digest('hex');
-        if (sig !== expected) return res.redirect('/login?error=bad_token');
+        if (!payload64 || !sig) return res.redirect('/login?error=bad_token');
+        const expected = crypto.createHmac('sha256', process.env.SSO_SECRET).update(payload64).digest('base64url');
+        const actualSignature = Buffer.from(sig, 'utf8');
+        const expectedSignature = Buffer.from(expected, 'utf8');
+        if (actualSignature.length !== expectedSignature.length || !crypto.timingSafeEqual(actualSignature, expectedSignature)) {
+            return res.redirect('/login?error=bad_token');
+        }
         const data = JSON.parse(Buffer.from(payload64, 'base64url').toString());
         if (Date.now() > data.exp) return res.redirect('/login?error=expired');
         const user = await User.findById(data.userId).select('_id email name');

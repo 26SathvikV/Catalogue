@@ -49,13 +49,7 @@ jobs:
         run: npm install
 
       # ------------------------------------------------------------------ #
-      # 4. Rebuild native modules (bcrypt etc.) for the Electron runtime
-      # ------------------------------------------------------------------ #
-      - name: Rebuild native modules for Electron
-        run: npx @electron/rebuild
-
-      # ------------------------------------------------------------------ #
-      # 5. Bundle the public Railway URL used by the Electron shell.
+      # 4. Bundle the public Railway URL used by the Electron shell.
       #    Set CATALOGUE_URL as a repository Actions variable.
       # ------------------------------------------------------------------ #
       - name: Write desktop app URL config
@@ -70,13 +64,14 @@ jobs:
           node -e "const fs=require('fs'); const url=new URL(process.env.CATALOGUE_URL || ''); if(url.protocol !== 'https:') throw new Error('CATALOGUE_URL must be an HTTPS URL'); fs.writeFileSync('catalogue-config.json', JSON.stringify({url:url.origin}));"
 
       # ------------------------------------------------------------------ #
-      # 6. Build the Electron app
+      # 5. Build the Electron app
       # ------------------------------------------------------------------ #
       - name: Build with electron-builder (Linux)
         if: runner.os == 'Linux'
         run: npx electron-builder --linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Build with electron-builder (macOS)
         if: runner.os == 'macOS'
@@ -84,12 +79,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false   # skip signing if no cert set
+          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Build with electron-builder (Windows)
         if: runner.os == 'Windows'
         run: npx electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=6144
 
       # ------------------------------------------------------------------ #
       # 7. Code-sign the artifact (optional -- silently skipped if the
