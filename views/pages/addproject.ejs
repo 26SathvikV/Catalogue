@@ -1,0 +1,50 @@
+<button style="position:absolute;right:2%;bottom:2%;width:10%;" onclick="window.location.replace('/projects/')">Back</button>
+
+<form class="middleform" method="POST" action="/projects/add">
+    <input type="text" name="name" placeholder="Name" autocomplete="off" required/> <br>
+    <input type="text" name="description" placeholder="Short Description" style="width:40%;" autocomplete="off" required/> <br> <br>
+    
+    <p style="font-size: 1.2em;font-weight: 700;">Category</p>
+    <select name="category" id="category" style="text-align: center;" required>
+        <option value="Creative Writing">Creative Writing</option>
+        <option value="Novel">Novel</option>
+        <option value="Short Story">Short Story</option>
+        <option value="Screenplay">Screenplay</option>
+        <option value="Worldbuilding">Worldbuilding</option>
+        <option value="Tabletop RPG">Tabletop RPG</option>
+        <option value="Game Design">Game Design</option>
+        <option value="Coding">Coding</option>
+        <option value="Research">Research</option>
+        <option value="Art & Illustration">Art & Illustration</option>
+        <option value="Music">Music</option>
+        <option value="Film & Video">Film & Video</option>
+        <option value="custom">Other</option>
+    </select>
+    <p id="warning" style="display: none;">This app was made for creative writing. Other categories are welcome but may not be fully supported yet.</p>
+    <br>
+    <input type="text" name="custom" id="custom" placeholder="Enter Category" style="display: none; margin-top: 10px;" autocomplete="off"/>
+
+    <br>
+    <input type="text" name="group" placeholder="Group (optional; e.g. 'Summer 2026')" style="margin-top: 10px;" autocomplete="off"/>
+
+    <br>
+    <input type="text" name="tags" placeholder="Tags (comma-separated, optional; e.g. fantasy, draft)" style="margin-top: 10px;" autocomplete="off"/>
+
+    <br><br>
+    <button type="submit" style="width:25%;">Add</button>
+</form>
+
+<script>
+
+    document.getElementById("category").onchange = function () {
+        if (this.value === "Creative Writing")
+            document.getElementById("warning").style.display = "none";
+        else
+            document.getElementById("warning").style.display = "inherit"
+
+        if (this.value === "custom")
+            document.getElementById("custom").style.display = "inherit"
+        else
+            document.getElementById("custom").style.display = "none"
+    }
+</script>

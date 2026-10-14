@@ -1,0 +1,98 @@
+<% var name = "Inbox"; %>
+
+<style>
+    .inbox-wrap { max-width: 680px; margin: 0 auto; }
+    .inbox-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .inbox-header h2 { margin: 0; }
+    .notif-list { display: flex; flex-direction: column; gap: 10px; }
+    .notif-item { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+    .notif-item.unread { border-left: 3px solid var(--link-color); }
+    .notif-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-msg { font-size: 14px; margin: 0 0 4px; line-height: 1.4; }
+    .notif-meta { font-size: 12px; opacity: 0.5; }
+    .notif-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .notif-btn { background: none; border: 1px solid var(--form-border-color); border-radius: 5px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: inherit; opacity: 0.6; }
+    .notif-btn:hover { opacity: 1; }
+    .empty-state { text-align: center; opacity: 0.4; margin-top: 60px; font-size: 14px; }
+</style>
+
+<div class="inbox-wrap">
+    <div class="inbox-header">
+        <h2>Inbox <% if (unread > 0) { %><span style="font-size:14px; font-weight:400; opacity:0.6;">(<%= unread %> unread)</span><% } %></h2>
+        <% if (notifications.length > 0) { %>
+            <button type="button" onclick="markAllRead()" style="font-size:13px; padding:6px 14px;">Mark all read</button>
+        <% } %>
+    </div>
+
+    <% if (notifications.length === 0) { %>
+        <div class="empty-state">
+            <p style="font-size:32px; margin-bottom:10px;"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon></p>
+            <p>No notifications yet.</p>
+        </div>
+    <% } else { %>
+        <div class="notif-list" id="notifList">
+            <% notifications.forEach(function(n) { %>
+                <div class="notif-item <%= n.read ? '' : 'unread' %>" id="notif-<%= n._id %>">
+                    <span class="notif-icon">
+                        <% if (n.type === 'collab_invite') { %><ion-icon name="people-outline" aria-hidden="true"></ion-icon>
+                        <% } else if (n.type === 'task_assign') { %><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
+                        <% } else if (n.type === 'project_add') { %><ion-icon name="folder-open-outline" aria-hidden="true"></ion-icon>
+                        <% } else { %><ion-icon name="chatbubble-outline" aria-hidden="true"></ion-icon><% } %>
+                    </span>
+                    <div class="notif-body">
+                        <p class="notif-msg"><%= n.message %></p>
+                        <span class="notif-meta humanized-date" data-date="<%= n.createdAt ? new Date(n.createdAt).toISOString() : '' %>"></span>
+                    </div>
+                    <div class="notif-actions">
+                        <% if (n.link) { %>
+                            <a href="<%= n.link %>" class="notif-btn" style="text-decoration:none;">View</a>
+                        <% } %>
+                        <% if (!n.read) { %>
+                            <button type="button" class="notif-btn" onclick="markRead('<%= n._id %>', this)">Mark read</button>
+                        <% } %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    <% } %>
+</div>
+
+<script>
+document.querySelectorAll('.humanized-date[data-date]').forEach(function(el) {
+    var d = el.getAttribute('data-date');
+    if (d && typeof moment !== 'undefined') el.textContent = moment(d).fromNow();
+    else if (d) el.textContent = new Date(d).toLocaleString();
+});
+
+function markRead(id, btn) {
+    fetch('/notifications/' + id + '/read', { method: 'POST' }).then(function() {
+        var item = document.getElementById('notif-' + id);
+        if (item) item.classList.remove('unread');
+        if (btn) btn.remove();
+        updateBadge();
+    });
+}
+
+function markAllRead() {
+    fetch('/notifications/read-all', { method: 'POST' }).then(function() {
+        document.querySelectorAll('.notif-item.unread').forEach(function(el) { el.classList.remove('unread'); });
+        document.querySelectorAll('.notif-btn').forEach(function(b) { if (b.textContent.trim() === 'Mark read') b.remove(); });
+        updateBadge(0);
+    });
+}
+
+function updateBadge(count) {
+    var badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    if (count === 0 || count === undefined) {
+        if (count === 0) { badge.style.display = 'none'; return; }
+        fetch('/api/notifications/unread-count').then(function(r){ return r.json(); }).then(function(d) {
+            if (d.count > 0) { badge.style.display = 'flex'; badge.textContent = d.count > 99 ? '99+' : d.count; }
+            else badge.style.display = 'none';
+        });
+    } else {
+        badge.style.display = 'flex'; badge.textContent = count > 99 ? '99+' : count;
+    }
+}
+</script>

@@ -1,0 +1,225 @@
+<% var name = "Timeline"; %>
+
+<style>
+    .timeline-wrapper {
+        overflow-x: auto;
+        padding: 40px 20px;
+        white-space: nowrap;
+        position: relative;
+        display: none;
+    }
+
+    .table-wrapper {
+        padding: 20px;
+        display: block;
+    }
+
+    .timeline-line {
+        position: sticky;
+        left: 0;
+        height: 4px;
+        width: 100%;
+        background-color: var(--form-border-color);
+        z-index: 0;
+    }
+
+    .timeline-track {
+        display: flex;
+        position: relative;
+        align-items: flex-start;
+        margin-top: 0.75em;
+    }
+
+    .timeline-event {
+        position: relative;
+        min-width: 200px;
+        margin-top: 0.75em;
+        text-align: center;
+    }
+
+    .timeline-dot {
+        width: 16px;
+        height: 16px;
+        background-color: var(--button-bg-color);
+        border-radius: 50%;
+        position: absolute;
+        top: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 2px solid white;
+        z-index: 2;
+    }
+
+    .timeline-content {
+        background-color: var(--card-bg-color);
+        border: 1px solid var(--form-border-color);
+        border-radius: 8px;
+        padding: 15px;
+        max-width: 250px;
+        margin-left: auto;
+        margin-right: auto;
+        z-index: 1;
+        position: relative;
+    }
+
+    .timeline-content h3 {
+        margin: 0 0 5px 0;
+        font-size: 1.1em;
+        color: var(--heading-color);
+        font-family: var(--h3-font-family);
+    }
+
+    .timeline-content p {
+        margin: 5px 0;
+        font-family: var(--p-font-family);
+        color: var(--text-color);
+        font-size: 0.9em;
+    }
+
+    .edit-btn {
+        display: inline-block;
+        background-color: var(--link-color);
+        color: white;
+        font-size: 0.9em;
+        padding: 5px 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .edit-btn:hover {
+        background-color: var(--button-bg-color);
+    }
+
+    .timeline-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .timeline-table th, .timeline-table td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid var(--form-border-color);
+    }
+
+    .timeline-table th {
+        background-color: var(--button-bg-color);
+        color: white;
+    }
+
+    .timeline-table td {
+        background-color: var(--card-bg-color);
+    }
+
+    .toggle-btns {
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .toggle-btns button {
+        padding: 10px 20px;
+        background-color: transparent;
+        color: var(--button-text-color);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .toggle-btns button.active {
+        background-color: var(--button-bg-color);
+    }
+</style>
+
+<div class="toggle-btns">
+    <button id="timelineToggle" class="active" onclick="toggleView('timeline')">Timeline View</button>
+    <button id="tableToggle" onclick="toggleView('table')">Table View</button>
+</div>
+
+<button style="position: absolute; bottom: 1%; right: 1%; width: 5vw; height: 5vw; border-radius: 50%; font-size: 200%;" onclick="window.location.replace('/projects/<%= projectId %>/timeline/add')">+</button>
+
+<% if (timeline.length === 0) { %>
+    <p style="text-align: center; color: var(--text-color); font-family: var(--p-font-family);">No events added yet.</p>
+<% } else { 
+    const sortedTimeline = timeline.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const startDate = new Date(sortedTimeline[0].date).getTime();
+    const endDate = new Date(sortedTimeline[sortedTimeline.length - 1].date).getTime();
+    const totalDuration = endDate - startDate;
+%>
+
+    <div id="timelineView" class="timeline-wrapper">
+        <div class="timeline-line"></div>
+        <div class="timeline-track">
+            <% sortedTimeline.forEach((event, index) => { 
+                const eventDate = new Date(event.date).getTime();
+                const relativeTime = eventDate - startDate;
+                const spacing = (relativeTime / totalDuration) * 100;
+            %>
+
+            <div class="timeline-event" style="margin-left: <%= spacing %>px;">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3><%= event.title %></h3>
+                    <p><%= new Date(event.date).toDateString() %></p>
+                    <p><%= event.description %></p>
+                    <% if (event.relatedCharacters.length) { %>
+                        <p style="color: var(--link-color); font-size: 0.85em;">
+                            <strong>Characters:</strong> <%= event.relatedCharacters.map(c => c.name).join(', ') %>
+                        </p>
+                    <% } %>
+                    <a href="/projects/<%= projectId %>/timeline/<%= event._id %>/edit" class="edit-btn">Edit Event</a>
+                </div>
+            </div>
+
+            <% }) %>
+        </div>
+    </div>
+
+    <div id="tableView" class="table-wrapper" style="display:none;">
+        <table class="timeline-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Characters</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% sortedTimeline.forEach(event => { %>
+                    <tr>
+                        <td><%= event.title %></td>
+                        <td><%= new Date(event.date).toDateString() %></td>
+                        <td><%= event.description %></td>
+                        <td><%= event.relatedCharacters.map(c => c.name).join(', ') %></td>
+                        <td>
+                            <a href="/projects/<%= projectId %>/timeline/<%= event._id %>/edit" class="edit-btn">Edit</a>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+
+<% } %>
+
+<script>
+    function toggleView(view) {
+        document.getElementById('timelineView').style.display = 'none';
+        document.getElementById('tableView').style.display = 'none';
+
+        if (view === 'timeline') {
+            document.getElementById('timelineView').style.display = 'block';
+            document.getElementById('timelineToggle').classList.add('active');
+            document.getElementById('tableToggle').classList.remove('active');
+        } else if (view === 'table') {
+            document.getElementById('tableView').style.display = 'block';
+            document.getElementById('tableToggle').classList.add('active');
+            document.getElementById('timelineToggle').classList.remove('active');
+        }
+    }
+
+    if (document.getElementById('timelineView')) toggleView('timeline');
+</script>

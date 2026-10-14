@@ -1,0 +1,168 @@
+name: Build Release
+
+# Triggered by a version tag push (e.g. git tag v1.0.0 && git push --tags).
+# workflow_dispatch lets you test the build from the Actions tab without a tag
+# -- the upload step is skipped when there is no tag.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to upload files to a GitHub Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: Catalogue-Windows-Setup.exe
+
+          - os: macos-latest
+            artifact: Catalogue-macOS.dmg
+
+          - os: ubuntu-latest
+            artifact: Catalogue-Linux.AppImage
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Source
+      # ------------------------------------------------------------------ #
+      - uses: actions/checkout@v5
+
+      # ------------------------------------------------------------------ #
+      # 2. Node.js
+      # ------------------------------------------------------------------ #
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'npm'
+
+      # ------------------------------------------------------------------ #
+      # 3. Dependencies
+      # ------------------------------------------------------------------ #
+      - name: Install dependencies
+        run: npm install
+
+      # ------------------------------------------------------------------ #
+      # 4. Rebuild native modules (bcrypt etc.) for the Electron runtime
+      # ------------------------------------------------------------------ #
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild
+
+      # ------------------------------------------------------------------ #
+      # 5. Bundle the public Railway URL used by the Electron shell.
+      #    Set CATALOGUE_URL as a repository Actions variable.
+      # ------------------------------------------------------------------ #
+      - name: Write desktop app URL config
+        env:
+          CATALOGUE_URL: ${{ vars.CATALOGUE_URL }}
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'); const url=new URL(process.env.CATALOGUE_URL || ''); if(url.protocol !== 'https:') throw new Error('CATALOGUE_URL must be an HTTPS URL'); fs.writeFileSync('catalogue-config.json', JSON.stringify({url:url.origin}));"
+
+      # ------------------------------------------------------------------ #
+      # 6. Build the Electron app
+      # ------------------------------------------------------------------ #
+      - name: Build with electron-builder (Linux)
+        if: runner.os == 'Linux'
+        run: npx electron-builder --linux --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with electron-builder (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # skip signing if no cert set
+
+      - name: Build with electron-builder (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------------ #
+      # 7. Code-sign the artifact (optional -- silently skipped if the
+      #    required secrets are not set in repo Settings > Secrets).
+      #
+      #  Windows -- needs a code-signing certificate (.pfx) from any
+      #    trusted CA (DigiCert, Sectigo, etc.).  Store in secrets as:
+      #      WINDOWS_CERT_PFX       base64-encoded .pfx file
+      #      WINDOWS_CERT_PASSWORD  password for the .pfx
+      #    To base64-encode:  certutil -encode cert.pfx cert.b64
+      #
+      #  macOS -- needs an Apple Developer ID Application certificate
+      #    and an app-specific password for notarization.  Store as:
+      #      APPLE_CERT_P12         base64-encoded .p12 export of the cert
+      #      APPLE_CERT_PASSWORD    password used when exporting the .p12
+      #      APPLE_ID               your Apple ID email
+      #      APPLE_APP_PASSWORD     app-specific password (appleid.apple.com)
+      #      APPLE_TEAM_ID          10-char team ID from developer.apple.com
+      #    To base64-encode:  base64 -i cert.p12 | pbcopy
+      # ------------------------------------------------------------------ #
+      - name: Sign artifact (Windows)
+        if: runner.os == 'Windows'
+        env:
+          PFX_DATA: ${{ secrets.WINDOWS_CERT_PFX }}
+          PFX_PASS: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        shell: powershell
+        run: |
+          if (-not $env:PFX_DATA) {
+            Write-Host "WINDOWS_CERT_PFX not set -- skipping code signing"
+            exit 0
+          }
+          $bytes = [Convert]::FromBase64String($env:PFX_DATA)
+          [IO.File]::WriteAllBytes('cert.pfx', $bytes)
+          $signtool = Get-ChildItem -Recurse "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /f cert.pfx /p $env:PFX_PASS `
+            /tr http://timestamp.digicert.com /td sha256 /fd sha256 `
+            /n "Sathvik Vemulapalli" `
+            "dist\${{ matrix.artifact }}"
+          Remove-Item cert.pfx
+
+      - name: Sign and notarize artifact (macOS)
+        if: runner.os == 'macOS'
+        env:
+          CERT_P12:       ${{ secrets.APPLE_CERT_P12 }}
+          CERT_PASSWORD:  ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_ID:       ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASS: ${{ secrets.APPLE_APP_PASSWORD }}
+          TEAM_ID:        ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$CERT_P12" ]; then
+            echo "APPLE_CERT_P12 not set -- skipping code signing"
+            exit 0
+          fi
+          echo "$CERT_P12" | base64 --decode > cert.p12
+          security create-keychain -p "" build.keychain
+          security import cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          codesign --force --sign "Developer ID Application: Sathvik Vemulapalli ($TEAM_ID)" \
+            --options runtime --timestamp "dist/${{ matrix.artifact }}"
+          ditto -c -k --keepParent "dist/${{ matrix.artifact }}" dist/notarize.zip
+          xcrun notarytool submit dist/notarize.zip \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASS" \
+            --team-id "$TEAM_ID" --wait
+          rm dist/notarize.zip cert.p12
+          security delete-keychain build.keychain
+
+      # ------------------------------------------------------------------ #
+      # 8. Attach to the GitHub Release created by the tag push.
+      #    Skipped on workflow_dispatch runs (no tag, no release to attach to).
+      # ------------------------------------------------------------------ #
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.artifact }}

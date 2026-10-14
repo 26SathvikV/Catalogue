@@ -1,0 +1,297 @@
+<% var name = "Edit Character"; %>
+
+<style>
+    .character-details {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 2rem;
+        color: var(--text-color);
+        font-family: var(--p-font-family);
+    }
+
+    .character-header {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+        color: var(--heading-color);
+        font-family: var(--h2-font-family);
+    }
+
+    .character-logo img {
+        border-radius: 50%;
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        margin-bottom: 2rem;
+        border: 0.7em solid var(--form-border-color);
+    }
+
+    .character-info {
+        margin-bottom: 2rem;
+        width: 80%;
+        max-width: 600px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-weight: bold;
+        color: var(--text-color);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select,
+    .form-group button {
+        width: 80%;
+        padding: 0.8rem;
+        margin: 0.5rem auto 0 auto;
+        border-radius: 8px;
+        border: 1px solid var(--form-border-color);
+        font-size: 1rem;
+        background-color: var(--form-bg-color);
+        color: var(--text-color);
+        text-align: center;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+    }
+
+    .form-group button {
+        background-color: var(--button-bg-color);
+        color: white;
+        cursor: pointer;
+    }
+
+    .form-group button:hover {
+        background-color: var(--button-hover-bg-color);
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .gallery-grid img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        border: 1px solid var(--form-border-color);
+    }
+
+    .voice-graph {
+        max-width: 400px;
+        margin: 2rem auto;
+        color: var(--text-color);
+        font-family: var(--p-font-family);
+    }
+
+    .traits-table {
+        width: 100%;
+        margin-bottom: 2rem;
+        border-collapse: collapse;
+        color: var(--text-color);
+    }
+
+    .traits-table th,
+    .traits-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--form-border-color);
+    }
+
+    .traits-table th {
+        background-color: var(--table-header-bg-color);
+        color: var(--table-header-text-color);
+    }
+
+    .trait-edit-btn {
+        background-color: var(--button-bg-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 15em;
+        padding: 0.8rem;
+        font-size: 1rem;
+    }
+
+    .trait-edit-btn:hover {
+        background-color: var(--button-hover-bg-color);
+    }
+
+    .back-button {
+        background-color: var(--form-bg-color);
+        color: var(--text-color);
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 1rem;
+        display: inline-block;
+        margin-top: 1.5rem;
+    }
+
+    .back-button:hover {
+        background-color: var(--form-border-color);
+    }
+</style>
+
+<div class="character-details">
+    <div class="character-header">
+        <h2>Character: <%= character.name %></h2>
+    </div>
+
+    <div class="character-logo">
+        <img src="<%= character.icon %>" alt="<%= character.name %> Logo">
+    </div>
+
+    <div class="character-info">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="<%= character.name %>" readonly>
+        </div>
+
+        <div class="nicknames-table">
+            <h3>Nicknames</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nickname</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% character.nicknames.forEach(function(nickname) { %>
+                        <tr>
+                            <td><%= nickname.nickname %></td>
+                            <td><%= nickname.type %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pronouns-table">
+            <h3>Pronouns</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pronoun</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% character.pronouns.forEach(function(pronoun) { %>
+                        <tr>
+                            <td><%= pronoun.pronoun %></td>
+                            <td><%= pronoun.type %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Role</label>
+            <input type="text" id="role" name="role" value="<%= character.role %>" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" readonly><%= character.description %></textarea>
+        </div>
+    </div>
+
+    <div class="traits-table">
+        <h3>Traits</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% character.traits.forEach(function(trait) { %>
+                    <tr>
+                        <td><%= trait.key %></td>
+                        <td><%= trait.value %></td>
+                        <td><%= trait.type %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="gallery-grid">
+        <% character.gallery.forEach(function(image) { %>
+            <div>
+                <img src="<%= image %>" alt="Gallery Image">
+            </div>
+        <% }) %>
+    </div>
+
+    <div class="voice-graph">
+        <h3>Voice Graph</h3>
+        <canvas id="voiceGraphCanvas"></canvas>
+    </div>
+
+    <div style="display: flex;">
+        <form method="GET" action="/projects/<%= projectId %>/characters/<%= character._id %>/edit" style="margin: 1em;">
+            <button type="submit" class="trait-edit-btn">Edit Character</button>
+        </form>
+
+        <form method="GET" action="/projects/<%= projectId %>/characters/<%= character._id %>/delete" style="margin: 1em;">
+            <button type="submit" class="trait-edit-btn" style="background-color: red;">Delete Character</button>
+        </form>
+    </div>
+
+    <a href="/projects/<%= projectId %>/characters" class="back-button">Back to Characters</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    function updateTable(voice) {
+        const ctx = document.getElementById('voiceGraphCanvas').getContext('2d');
+        const voiceGraph = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Pitch', 'Tempo', 'Clarity', 'Loudness'],
+                datasets: [{
+                    label: 'Voice Profile',
+                    data: [voice.pitch, voice.tempo, voice.clarity, voice.loudness],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: '#36A2EB',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 10,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const voiceData = <%- JSON.stringify(character.voiceGraph) %>;
+        console.log(voiceData);
+        updateTable(voiceData);
+    });
+</script>

@@ -1,0 +1,292 @@
+<% var name = "Task Manager"; %>
+
+<style>
+    .tm-layout { display: flex; gap: 24px; max-width: 1100px; margin: 0 auto; }
+    .tm-main { flex: 1; min-width: 0; }
+    .tm-sidebar { width: 260px; flex-shrink: 0; }
+    @media (max-width: 740px) { .tm-layout { flex-direction: column; } .tm-sidebar { width: 100%; } }
+
+    .session-card {
+        border: 1px solid var(--form-border-color);
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: var(--form-bg-color);
+        margin-bottom: 10px;
+        position: relative;
+    }
+    .session-card.is-done { opacity: 0.55; }
+    .session-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .session-name { font-size: 15px; font-weight: 600; flex: 1; min-width: 0; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+    .badge-done { background: #27ae60; color: #fff; }
+    .badge-open { background: var(--form-border-color); color: inherit; opacity: 0.7; }
+    .badge-high { background: #e74c3c; color: #fff; }
+    .badge-low  { background: #27ae60; color: #fff; }
+    .subtask-list { list-style: none; padding: 0; margin: 0 0 10px; }
+    .subtask-list li { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 2px 0; opacity: 0.8; }
+    .subtask-list li.sub-done { text-decoration: line-through; opacity: 0.45; }
+    .session-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .session-actions form { margin: 0; }
+    .btn-sm { padding: 3px 10px; font-size: 12px; cursor: pointer; border-radius: 4px; border: 1px solid var(--form-border-color); background: var(--form-bg-color); color: inherit; }
+    .btn-sm:hover { opacity: 0.7; }
+    .btn-del { border-color: #e74c3c44; color: #e74c3c; }
+
+    .add-form {
+        border: 1px solid var(--form-border-color);
+        border-radius: 8px; padding: 16px 20px;
+        background: var(--form-bg-color); margin-bottom: 22px;
+    }
+    .add-form h3 { margin: 0 0 12px; }
+    .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px; }
+    .form-row input { flex: 2; min-width: 130px; }
+    .form-row select { flex: 1; min-width: 110px; }
+    .section-heading { font-size: 12px; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.06em; margin: 20px 0 6px; }
+
+    .sidebar-box { border: 1px solid var(--form-border-color); border-radius: 8px; padding: 14px 16px; background: var(--form-bg-color); margin-bottom: 14px; }
+    .sidebar-box h4 { margin: 0 0 10px; font-size: 14px; }
+    .avail-item { font-size: 13px; display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--form-border-color); }
+    .avail-item:last-child { border-bottom: none; }
+    .avail-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .avail-item form { margin: 0; }
+
+    /* Edit modal */
+    .edit-modal { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .edit-modal.open { display: flex; }
+    .modal-box { background: var(--background-color); border: 1px solid var(--form-border-color); border-radius: 10px; padding: 24px; width: 460px; max-width: 94vw; max-height: 88vh; overflow-y: auto; }
+    .modal-box h3 { margin-top: 0; }
+    .sub-row { display: flex; gap: 6px; margin-bottom: 6px; }
+    .sub-row input { flex: 1; }
+</style>
+
+<div class="tm-layout">
+<div class="tm-main">
+
+    <div class="add-form">
+        <h3>New Task</h3>
+        <form method="POST" action="/projects/<%= projectId %>/taskManager">
+            <div class="form-row">
+                <input type="text" name="name" required placeholder="Task name...">
+                <select name="priority">
+                    <option value="">Normal</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                </select>
+                <button type="submit">Add</button>
+            </div>
+            <input type="text" name="description" placeholder="Optional first subtask..." style="width:100%; box-sizing:border-box;">
+        </form>
+    </div>
+
+    <%
+        var open = sessions.filter(function(s) { return !s.completed; });
+        var done = sessions.filter(function(s) { return s.completed; });
+    %>
+
+    <% if (sessions.length === 0) { %>
+        <p style="text-align:center; opacity:0.45; margin-top:40px;">No tasks yet. Add one above or assign from Serenity.</p>
+    <% } %>
+
+    <% if (open.length > 0) { %>
+        <p class="section-heading">Open: <%= open.length %></p>
+        <% open.forEach(function(s) {
+            var isHigh = s.name.startsWith('[HIGH] ');
+            var isLow  = s.name.startsWith('[LOW] ');
+            var displayName = s.name.replace(/^\[(HIGH|LOW)\] /, '');
+        %>
+        <div class="session-card">
+            <div class="session-header">
+                <span class="session-name"><%= displayName %></span>
+                <% if (isHigh) { %><span class="badge badge-high">HIGH</span><% } %>
+                <% if (isLow)  { %><span class="badge badge-low">LOW</span><% } %>
+                <span class="badge badge-open">Open</span>
+            </div>
+            <% if (s.tasks && s.tasks.length > 0) { %>
+                <ul class="subtask-list">
+                <% s.tasks.forEach(function(sub) { %>
+                    <li class="<%= sub.done ? 'sub-done' : '' %>">
+                        <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/subtask/<%= sub._id %>" style="margin:0; display:flex; align-items:center; gap:6px;">
+                            <input type="hidden" name="done" value="<%= sub.done ? 'false' : 'true' %>">
+                            <input type="checkbox" onchange="this.form.submit()" <%= sub.done ? 'checked' : '' %>>
+                        </form>
+                        <span><%= sub.name %></span>
+                    </li>
+                <% }) %>
+                </ul>
+            <% } %>
+            <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/addsubtask"
+                  style="display:flex; gap:6px; margin-bottom:8px;">
+                <input type="text" name="subtask" placeholder="Add subtask…"
+                       style="flex:1; font-size:12px; padding:3px 8px;">
+                <button class="btn-sm" type="submit" style="flex-shrink:0;">+</button>
+            </form>
+            <div class="session-actions">
+                <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/status">
+                    <input type="hidden" name="completed" value="true">
+                    <button class="btn-sm" type="submit">Mark Complete</button>
+                </form>
+                <button class="btn-sm edit-btn" type="button"
+                        data-id="<%= s._id %>"
+                        data-name="<%= encodeURIComponent(s.name) %>"
+                        data-subs="<%= encodeURIComponent(JSON.stringify((s.tasks || []).map(function(t){ return t.name; }))) %>">Edit</button>
+                <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/unlink">
+                    <button class="btn-sm" type="submit">Unlink</button>
+                </form>
+                <button class="btn-sm btn-del" type="button"
+                        onclick="confirmDelete('<%= s._id %>', '<%= projectId %>')">Delete</button>
+            </div>
+        </div>
+        <% }) %>
+    <% } %>
+
+    <% if (done.length > 0) { %>
+        <p class="section-heading">Completed: <%= done.length %></p>
+        <% done.forEach(function(s) {
+            var isHigh = s.name.startsWith('[HIGH] ');
+            var isLow  = s.name.startsWith('[LOW] ');
+            var displayName = s.name.replace(/^\[(HIGH|LOW)\] /, '');
+        %>
+        <div class="session-card is-done">
+            <div class="session-header">
+                <span class="session-name"><%= displayName %></span>
+                <% if (isHigh) { %><span class="badge badge-high">HIGH</span><% } %>
+                <% if (isLow)  { %><span class="badge badge-low">LOW</span><% } %>
+                <span class="badge badge-done">Done</span>
+            </div>
+            <% if (s.tasks && s.tasks.length > 0) { %>
+                <ul class="subtask-list">
+                <% s.tasks.forEach(function(sub) { %>
+                    <li class="sub-done"><span><%= sub.name %></span></li>
+                <% }) %>
+                </ul>
+            <% } %>
+            <div class="session-actions">
+                <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/status">
+                    <input type="hidden" name="completed" value="false">
+                    <button class="btn-sm" type="submit">Reopen</button>
+                </form>
+                <form method="POST" action="/projects/<%= projectId %>/taskManager/<%= s._id %>/unlink">
+                    <button class="btn-sm" type="submit">Unlink</button>
+                </form>
+                <button class="btn-sm btn-del" type="button"
+                        onclick="confirmDelete('<%= s._id %>', '<%= projectId %>')">Delete</button>
+            </div>
+        </div>
+        <% }) %>
+    <% } %>
+
+</div><!-- /tm-main -->
+
+<div class="tm-sidebar">
+    <div class="sidebar-box">
+        <h4>Assign from Serenity</h4>
+        <% if (available.length === 0) { %>
+            <p style="font-size:13px; opacity:0.45; margin:0;">No other sessions available.</p>
+        <% } else { %>
+            <% available.slice(0, 30).forEach(function(s) { %>
+                <div class="avail-item">
+                    <span title="<%= s.name %>"><%= s.name.replace(/^\[(HIGH|LOW)\] /, '') %></span>
+                    <form method="POST" action="/projects/<%= projectId %>/taskManager/assign">
+                        <input type="hidden" name="sessionId" value="<%= s._id %>">
+                        <button class="btn-sm" type="submit">+</button>
+                    </form>
+                </div>
+            <% }) %>
+        <% } %>
+    </div>
+</div>
+</div><!-- /tm-layout -->
+
+<!-- Delete confirm modal -->
+<div class="edit-modal" id="deleteModal">
+    <div class="modal-box" style="max-width:360px;">
+        <h3>Delete Task?</h3>
+        <p style="font-size:14px; opacity:0.7; margin-bottom:18px;">This permanently deletes the Serenity WorkSession. It cannot be undone.</p>
+        <form method="POST" id="deleteForm">
+            <input type="hidden" id="deleteTaskId" name="_confirm" value="">
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" id="cancelDelete">Cancel</button>
+                <button type="submit" style="color:#e74c3c; border-color:#e74c3c44;">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit modal -->
+<div class="edit-modal" id="editModal">
+    <div class="modal-box">
+        <h3>Edit Task</h3>
+        <form method="POST" id="editForm">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px; opacity:0.7;">Name</label>
+                <input type="text" name="name" id="editName" required style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:13px; opacity:0.7;">Priority</label>
+                <select name="priority" id="editPri" style="margin-top:4px; display:block;">
+                    <option value="">Normal</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:13px; opacity:0.7;">Subtasks</label>
+                <div id="editSubs" style="margin-top:6px;"></div>
+                <div class="sub-row" style="margin-top:8px;">
+                    <input type="text" id="newSubInput" placeholder="New subtask...">
+                    <button type="button" onclick="addSub()">Add</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" onclick="closeEdit()">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEdit(id, rawName, subs) {
+    var m = rawName.match(/^\[(HIGH|LOW)\] /);
+    document.getElementById('editName').value = rawName.replace(/^\[(HIGH|LOW)\] /, '');
+    document.getElementById('editPri').value = m ? m[1].toLowerCase() : '';
+    document.getElementById('editForm').action = '/projects/<%= projectId %>/taskManager/' + id + '/edit';
+    var c = document.getElementById('editSubs');
+    c.innerHTML = '';
+    (subs || []).forEach(function(s) { appendSubRow(s, c); });
+    document.getElementById('editModal').classList.add('open');
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+function addSub() {
+    var inp = document.getElementById('newSubInput');
+    if (!inp.value.trim()) return;
+    appendSubRow(inp.value.trim(), document.getElementById('editSubs'));
+    inp.value = '';
+}
+function appendSubRow(val, c) {
+    var r = document.createElement('div'); r.className = 'sub-row';
+    r.innerHTML = '<input type="text" name="subtasks" value="' + esc(val) + '" style="flex:1;">' +
+        '<button type="button" style="color:#e74c3c;" onclick="this.parentElement.remove()">✕</button>';
+    c.appendChild(r);
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.getElementById('editModal').addEventListener('click', function(e) { if (e.target===this) closeEdit(); });
+
+// Data-attribute driven edit button
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.edit-btn');
+    if (!btn) return;
+    var id   = btn.dataset.id;
+    var name = decodeURIComponent(btn.dataset.name);
+    var subs = JSON.parse(decodeURIComponent(btn.dataset.subs));
+    openEdit(id, name, subs);
+});
+
+// On-page delete confirm
+function confirmDelete(id, pid) {
+    document.getElementById('deleteTaskId').value = id;
+    document.getElementById('deleteForm').action = '/projects/' + pid + '/taskManager/' + id + '/delete';
+    document.getElementById('deleteModal').classList.add('open');
+}
+document.getElementById('deleteModal').addEventListener('click', function(e) { if (e.target===this) this.classList.remove('open'); });
+document.getElementById('cancelDelete').addEventListener('click', function() { document.getElementById('deleteModal').classList.remove('open'); });
+</script>

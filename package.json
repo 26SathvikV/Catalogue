@@ -1,0 +1,96 @@
+{
+  "name": "catalogue",
+  "version": "1.0.0",
+  "description": "Creative writing project manager",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node index.js",
+    "electron": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "bcrypt": "^6.0.0",
+    "connect-mongo": "^5.1.0",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "mammoth": "^1.12.0",
+    "mongoose": "^8.4.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^10.1.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.19.1",
+    "stripe": "^22.3.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.sathvik.catalogue",
+    "productName": "Catalogue",
+    "copyright": "Copyright © 2026 Sathvik Vemulapalli",
+    "asar": true,
+    "files": [
+      "**/*",
+      "!.git/**",
+      "!.github/**",
+      "!*.md"
+    ],
+    "extraFiles": [
+      {
+        "from": "catalogue-config.json",
+        "to": "catalogue-config.json",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Catalogue-Windows-Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "Catalogue-macOS.dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Catalogue-Linux.AppImage",
+      "category": "Office"
+    }
+  }
+}

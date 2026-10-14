@@ -1,0 +1,147 @@
+<style>
+    .wsd-wrap { max-width: 860px; margin: 0 auto; }
+    .wsd-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    .wsd-header h2 { margin: 0 0 4px; }
+    .wsd-header p { margin: 0; opacity: 0.55; font-size: 13px; }
+    .wsd-cols { display: grid; grid-template-columns: 1fr 280px; gap: 28px; }
+    @media (max-width: 680px) { .wsd-cols { grid-template-columns: 1fr; } }
+    .section-heading { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.45; margin: 0 0 12px; }
+    .proj-grid { display: flex; flex-direction: column; gap: 10px; }
+    .proj-item { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .proj-item a { font-size: 14px; font-weight: 500; text-decoration: none; color: inherit; }
+    .proj-item a:hover { text-decoration: underline; }
+    .proj-item-meta { font-size: 12px; opacity: 0.5; }
+    .member-list { display: flex; flex-direction: column; gap: 8px; }
+    .member-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 7px; }
+    .member-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--link-color); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .member-info { flex: 1; min-width: 0; }
+    .member-name { font-size: 13px; font-weight: 500; }
+    .member-role { font-size: 11px; opacity: 0.5; }
+    .invite-box { margin-top: 14px; display: flex; gap: 8px; }
+    .invite-box input { flex: 1; padding: 7px 10px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 6px; color: inherit; font-family: inherit; font-size: 13px; }
+    .add-proj-box { margin-top: 14px; }
+    .add-proj-box select { width: 100%; padding: 7px 10px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 6px; color: inherit; font-family: inherit; font-size: 13px; margin-bottom: 8px; }
+    .empty-state-sm { font-size: 13px; opacity: 0.4; text-align: center; padding: 20px 0; }
+    .back-link { font-size: 13px; opacity: 0.55; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    .back-link:hover { opacity: 1; }
+    .status-msg { font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-top: 8px; display: none; }
+    .status-msg.ok { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .status-msg.err { background: rgba(239,68,68,0.12); color: #ef4444; }
+</style>
+
+<a class="back-link" href="/workspace">← All Workspaces</a>
+
+<div class="wsd-wrap">
+    <div class="wsd-header">
+        <div>
+            <h2><%= workspace.name %></h2>
+            <% if (workspace.description) { %><p><%= workspace.description %></p><% } %>
+        </div>
+    </div>
+
+    <div class="wsd-cols">
+        <!-- Projects column -->
+        <div>
+            <p class="section-heading">Projects</p>
+            <div class="proj-grid" id="projList">
+                <% if (workspace.projects.length === 0) { %>
+                    <div class="empty-state-sm">No projects yet.</div>
+                <% } else { %>
+                    <% workspace.projects.forEach(function(p) { %>
+                        <div class="proj-item">
+                            <div>
+                                <a href="/projects/<%= p._id %>"><%= p.name || 'Untitled Project' %></a>
+                                <% if (p.description) { %><div class="proj-item-meta"><%= p.description.slice(0, 60) %><%= p.description.length > 60 ? '…' : '' %></div><% } %>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+
+            <% if (workspace.owner.toString ? workspace.owner.toString() === userId : workspace.owner == userId) { %>
+            <div class="add-proj-box" style="margin-top:16px;">
+                <p class="section-heading" style="margin-bottom:8px;">Add a project</p>
+                <input type="text" id="addProjId" placeholder="Paste project ID" style="width:100%;box-sizing:border-box;padding:7px 10px;background:var(--form-bg-color);border:1px solid var(--form-border-color);border-radius:6px;color:inherit;font-family:inherit;font-size:13px;margin-bottom:8px;" />
+                <button type="button" onclick="addProject()" style="font-size:13px;padding:6px 14px;">Add</button>
+                <div class="status-msg" id="addProjStatus"></div>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- Members column -->
+        <div>
+            <p class="section-heading">Members (<%= workspace.members.length %>)</p>
+            <div class="member-list" id="memberList">
+                <% workspace.members.forEach(function(m) { var u = m.userId || {}; %>
+                    <div class="member-item">
+                        <div class="member-avatar"><%= (u.name || '?').charAt(0).toUpperCase() %></div>
+                        <div class="member-info">
+                            <div class="member-name"><%= u.name || 'Unknown' %></div>
+                            <div class="member-role"><%= m.role %></div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+
+            <% if (workspace.owner.toString ? workspace.owner.toString() === userId : workspace.owner == userId) { %>
+            <div class="invite-box" style="margin-top:16px; flex-direction:column; gap:6px; display:flex;">
+                <p class="section-heading" style="margin-bottom:4px;">Invite member</p>
+                <div style="display:flex;gap:8px;">
+                    <input type="email" id="inviteEmail" placeholder="Email address" />
+                    <button type="button" onclick="inviteMember()" style="font-size:13px;padding:6px 14px;flex-shrink:0;">Invite</button>
+                </div>
+                <div class="status-msg" id="inviteStatus"></div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<script>
+var wsId = '<%= workspace._id %>';
+
+function showStatus(elId, msg, isOk) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'status-msg ' + (isOk ? 'ok' : 'err');
+    el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 4000);
+}
+
+function inviteMember() {
+    var email = document.getElementById('inviteEmail').value.trim();
+    if (!email) return;
+    fetch('/workspace/' + wsId + '/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+            showStatus('inviteStatus', d.message || 'Member added!', true);
+            document.getElementById('inviteEmail').value = '';
+        } else {
+            showStatus('inviteStatus', d.error || 'Error', false);
+        }
+    }).catch(function() { showStatus('inviteStatus', 'Request failed', false); });
+}
+
+function addProject() {
+    var projectId = document.getElementById('addProjId').value.trim();
+    if (!projectId) return;
+    fetch('/workspace/' + wsId + '/add-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: projectId })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+            showStatus('addProjStatus', 'Project added! Refresh to see it.', true);
+            document.getElementById('addProjId').value = '';
+        } else {
+            showStatus('addProjStatus', d.error || 'Error', false);
+        }
+    }).catch(function() { showStatus('addProjStatus', 'Request failed', false); });
+}
+
+document.getElementById('inviteEmail') && document.getElementById('inviteEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') inviteMember(); });
+</script>

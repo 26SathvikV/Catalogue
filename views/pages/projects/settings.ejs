@@ -1,0 +1,460 @@
+<% var name = "Settings"; %>
+
+<style>
+    .settings-wrap { max-width: 660px; margin: 0 auto; }
+    .settings-section {
+        border: 1px solid var(--form-border-color);
+        border-radius: 8px; padding: 22px 24px;
+        background: var(--form-bg-color); margin-bottom: 20px;
+    }
+    .settings-section h3 { margin: 0 0 16px; font-size: 16px; }
+    .field-row { margin-bottom: 12px; }
+    .field-row label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
+    .field-row input, .field-row select, .field-row textarea { width: 100%; box-sizing: border-box; }
+    .field-row textarea { resize: vertical; min-height: 70px; }
+    .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .btn-primary { padding: 7px 18px; cursor: pointer; border-radius: 5px; border: none; background: var(--button-bg-color); color: inherit; font-size: 13px; }
+    .btn-primary:hover { opacity: 0.8; }
+    .btn-ghost { padding: 6px 14px; cursor: pointer; border-radius: 5px; border: 1px solid var(--form-border-color); background: var(--background-color); color: inherit; font-size: 13px; }
+    .btn-ghost:hover { opacity: 0.75; }
+    .btn-danger { border-color: #e74c3c44; color: #e74c3c; }
+
+    .member-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--form-border-color); font-size: 13px; }
+    .member-row:last-child { border-bottom: none; }
+    .member-row .member-name { flex: 1; }
+    .member-row .member-perm { font-size: 11px; opacity: 0.6; background: var(--form-border-color); padding: 2px 7px; border-radius: 8px; }
+
+    .share-link-box { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .share-link-box input { flex: 1; font-size: 13px; background: var(--background-color); border: 1px solid var(--form-border-color); border-radius: 5px; padding: 6px 10px; color: inherit; }
+    .copy-btn { padding: 6px 12px; cursor: pointer; font-size: 12px; border-radius: 5px; border: 1px solid var(--form-border-color); background: var(--form-bg-color); color: inherit; }
+    .copy-btn:hover { opacity: 0.75; }
+
+    .vis-hint { font-size: 12px; opacity: 0.55; margin-top: 4px; }
+</style>
+
+<div class="settings-wrap">
+    <h2 style="margin-bottom:20px;">Project Settings</h2>
+
+    <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+        <div style="background:#e74c3c22; border:1px solid #e74c3c55; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:14px; color:#e74c3c;">
+            <%= errorMsg %>
+        </div>
+    <% } %>
+    <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+        <div style="background:#27ae6022; border:1px solid #27ae6055; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:14px; color:#27ae60;">
+            <%= successMsg %>
+        </div>
+    <% } %>
+
+    <!-- General settings -->
+    <div class="settings-section">
+        <h3>General</h3>
+        <form method="POST" action="/projects/<%= projectId %>/settings">
+            <div class="field-row">
+                <label>Project Name</label>
+                <input type="text" name="name" value="<%= project.name %>" required>
+            </div>
+            <div class="field-row">
+                <label>Description</label>
+                <textarea name="description"><%= project.description || '' %></textarea>
+            </div>
+            <div class="field-row">
+                <label>Category</label>
+                <input type="text" name="category" value="<%= project.category || '' %>" placeholder="e.g. Novel, Worldbuilding, Game...">
+            </div>
+            <div class="field-row">
+                <label>Group</label>
+                <input type="text" name="group" value="<%= project.group || '' %>" placeholder="e.g. Summer 2026, Series A...">
+            </div>
+            <div class="field-row">
+                <label>Tags</label>
+                <input type="text" name="tags" value="<%= (project.tags || []).join(', ') %>" placeholder="comma-separated, e.g. fantasy, novel, draft">
+            </div>
+            <div class="field-row">
+                <label>Project Color <span style="opacity:0.5; font-size:11px;">(shown on cards and in switcher)</span></label>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="color" name="color" value="<%= project.color || '#4a90d9' %>" style="width:44px; height:32px; padding:2px; cursor:pointer; flex-shrink:0;">
+                    <input type="text" id="colorHex" value="<%= project.color || '#4a90d9' %>" placeholder="#4a90d9" style="flex:1; font-size:13px;" oninput="syncColorPicker(this.value)">
+                </div>
+            </div>
+            <div class="field-row">
+                <label>Visibility</label>
+                <select name="visibility">
+                    <option value="private"              <%= (project.visibility || 'private') === 'private'              ? 'selected' : '' %>>Private: only you can access it</option>
+                    <option value="collaborators_only"   <%= (project.visibility || 'private') === 'collaborators_only'   ? 'selected' : '' %>>Collaborators Only: share link adds them as editor</option>
+                    <option value="unlisted"             <%= (project.visibility || 'private') === 'unlisted'             ? 'selected' : '' %>>Unlisted: anyone with the link can view</option>
+                    <option value="public"               <%= (project.visibility || 'private') === 'public'               ? 'selected' : '' %>>Public: listed on Explore page</option>
+                </select>
+                <p class="vis-hint">Collaborators Only: editor link grants edit access. Unlisted or Public: viewer link grants view-only access.</p>
+            </div>
+            <div class="field-row">
+                <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; font-size:13px; opacity:1;">
+                    <input type="checkbox" name="publicEditable" <%= project.publicEditable ? 'checked' : '' %> style="flex-shrink:0; margin-top:2px;">
+                    <span>Allow anyone with the link to edit this project (publicly editable)</span>
+                </label>
+                <p class="vis-hint">When enabled and visibility is Unlisted or Public, anyone with the link can make edits without logging in.</p>
+            </div>
+            <div class="btn-row">
+                <button class="btn-primary" type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Share links (not shown for private projects) -->
+    <% if ((project.visibility || 'private') !== 'private') { %>
+    <div class="settings-section">
+        <h3>Shareable Links</h3>
+        <%
+            var isPublic = (project.visibility || 'private') === 'public';
+            var baseUrl = (typeof siteOrigin !== 'undefined' && siteOrigin) ? siteOrigin : 'http://localhost:4000';
+        %>
+
+        <!-- Viewer link -->
+        <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Viewer Link</p>
+        <% if (isPublic) { %>
+            <p style="font-size:12px; opacity:0.6; margin:0 0 8px;">This project is public; anyone can view it directly.</p>
+            <div class="share-link-box">
+                <input type="text" id="viewerLinkInput" value="<%= baseUrl + '/projects/' + projectId %>" readonly>
+                <button class="copy-btn" onclick="copyLink('viewerLinkInput', this)">Copy</button>
+            </div>
+        <% } else if (project.shareToken) { %>
+            <p style="font-size:12px; opacity:0.6; margin:0 0 8px;">Anyone with this link can join as a viewer.</p>
+            <div class="share-link-box">
+                <input type="text" id="viewerLinkInput" value="<%= baseUrl + '/join/' + project.shareToken %>" readonly>
+                <button class="copy-btn" onclick="copyLink('viewerLinkInput', this)">Copy</button>
+            </div>
+        <% } else { %>
+            <p style="font-size:13px; opacity:0.5; margin:0 0 10px;">No link generated yet.</p>
+        <% } %>
+
+        <!-- Editor link -->
+        <p style="font-size:13px; font-weight:600; margin:16px 0 4px;">Editor Link</p>
+        <% if (project.editorToken) { %>
+            <p style="font-size:12px; opacity:0.6; margin:0 0 8px;">Anyone with this link can join as an editor. Share carefully.</p>
+            <div class="share-link-box">
+                <input type="text" id="editorLinkInput" value="<%= baseUrl + '/join/' + project.editorToken %>" readonly>
+                <button class="copy-btn" onclick="copyLink('editorLinkInput', this)">Copy</button>
+            </div>
+        <% } else { %>
+            <p style="font-size:13px; opacity:0.5; margin:0 0 10px;">No editor link generated yet.</p>
+        <% } %>
+
+        <form method="POST" action="/projects/<%= projectId %>/settings/sharelink" style="margin-top:14px;">
+            <button class="btn-ghost" type="submit"><%= (project.shareToken || project.editorToken) ? 'Regenerate Both Links' : 'Generate Links' %></button>
+        </form>
+    </div>
+    <% } %>
+
+    <!-- Collaborators -->
+    <div class="settings-section">
+        <h3>Collaborators</h3>
+        <% if (project.shared && project.shared.length > 0) { %>
+            <% project.shared.forEach(function(s) { %>
+                <div class="member-row">
+                    <span class="member-name">
+                        <% if (s.person && s.person.name) { %>
+                            <%= s.person.name %> <span style="opacity:0.5; font-size:12px;">(<%= s.person.email %>)</span>
+                        <% } else { %>
+                            Unknown user
+                        <% } %>
+                    </span>
+                    <span class="member-perm"><%= s.permission %></span>
+                    <form method="POST" id="removeForm-<%= s.person ? s.person._id : 'unknown' %>"
+                          action="/projects/<%= projectId %>/settings/remove/<%= s.person ? s.person._id : '' %>" style="margin:0;">
+                        <button class="btn-ghost btn-danger" type="button" style="padding:3px 8px; font-size:12px;"
+                                onclick="confirmRemoveMember('<%= s.person ? s.person._id : 'unknown' %>')">Remove</button>
+                    </form>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <p style="font-size:13px; opacity:0.5; margin:0 0 14px;">No collaborators yet.</p>
+        <% } %>
+
+        <h4 style="margin: 18px 0 10px; font-size:14px;">Add Collaborator</h4>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start;">
+            <div style="flex:2; min-width:180px;">
+                <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">Search by name or email</label>
+                <input type="text" id="inviteSearch" placeholder="Start typing..." autocomplete="off"
+                       oninput="searchCollabUsers(this.value)" style="width:100%; box-sizing:border-box;">
+                <div id="inviteResults" style="border:1px solid var(--form-border-color); border-radius:6px; background:var(--form-bg-color); display:none; margin-top:4px; overflow:hidden;"></div>
+            </div>
+            <div style="flex:1; min-width:120px;">
+                <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">Permission</label>
+                <select id="invitePermission">
+                    <option value="view">View</option>
+                    <option value="edit">Edit</option>
+                </select>
+            </div>
+        </div>
+        <div id="selectedUser" style="display:none; margin-top:10px; padding:10px; background:var(--background-color); border:1px solid var(--form-border-color); border-radius:6px; align-items:center; gap:10px; font-size:13px;">
+            <span id="selectedUserName" style="flex:1;"></span>
+            <button type="button" class="btn-primary" onclick="confirmAddCollab()">Add</button>
+            <button type="button" class="btn-ghost" onclick="clearInviteSelection()">✕</button>
+        </div>
+        <div id="noUserFound" style="display:none; margin-top:10px; padding:10px; background:var(--background-color); border:1px solid var(--form-border-color); border-radius:6px; font-size:13px;">
+            <span style="opacity:0.7;" id="noUserEmail"></span>
+            <span style="opacity:0.5;">: No account found.</span>
+            <button type="button" id="sendEmailInviteBtn" class="btn-ghost" style="display:none; margin-left:10px; font-size:12px;" onclick="sendEmailInvite()">Send invite email</button>
+        </div>
+    </div>
+
+    <!-- Pending invites -->
+    <% if (typeof pendingCollabs !== 'undefined' && pendingCollabs && pendingCollabs.length > 0) { %>
+    <div class="settings-section">
+        <h3>Pending Invites</h3>
+        <% pendingCollabs.forEach(function(p) { %>
+            <%
+                var invitedAt = p.invitedAt ? new Date(p.invitedAt) : null;
+                var daysSince = invitedAt ? Math.floor((Date.now() - invitedAt.getTime()) / (1000*60*60*24)) : 999;
+                var canReinvite = daysSince >= 7;
+            %>
+            <div class="member-row">
+                <span class="member-name"><%= p.email %></span>
+                <span class="member-perm"><%= p.permission %></span>
+                <span style="font-size:11px; opacity:0.5;">
+                    invited <%= invitedAt ? invitedAt.toLocaleDateString('en-US', {month:'short', day:'numeric'}) : 'recently' %>
+                </span>
+                <% if (canReinvite) { %>
+                    <form method="POST" action="/projects/<%= projectId %>/settings/invite" style="margin:0;">
+                        <input type="hidden" name="email" value="<%= p.email %>">
+                        <input type="hidden" name="permission" value="<%= p.permission %>">
+                        <button class="btn-ghost" type="submit" style="padding:3px 8px; font-size:12px;">Re-invite</button>
+                    </form>
+                <% } else { %>
+                    <span style="font-size:11px; opacity:0.4;">re-invite in <%= 7 - daysSince %>d</span>
+                <% } %>
+                <form method="POST" action="/projects/<%= projectId %>/settings/removepending" style="margin:0;">
+                    <input type="hidden" name="email" value="<%= p.email %>">
+                    <button class="btn-ghost btn-danger" type="submit" style="padding:3px 8px; font-size:12px;">Remove</button>
+                </form>
+            </div>
+        <% }) %>
+    </div>
+    <% } %>
+
+    <!-- Activity log -->
+    <div class="settings-section">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            <h3 style="margin:0;">Activity Log</h3>
+            <button class="btn-ghost" type="button" id="loadActivityBtn" onclick="loadActivity()">Load Activity</button>
+        </div>
+        <div id="activityLog">
+            <p style="font-size:13px; opacity:0.45; margin:0;">Click Load Activity to see recent collaborator actions.</p>
+        </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="settings-section" style="border-color:#e74c3c44;">
+        <h3 style="color:#e74c3c;">Danger Zone</h3>
+        <p style="font-size:13px; opacity:0.7; margin:0 0 12px;">Deleting a project is permanent and cannot be undone.</p>
+        <button class="btn-ghost btn-danger" disabled title="Coming soon">Delete Project</button>
+    </div>
+</div>
+
+<!-- Remove member confirm modal -->
+<div style="display:none; position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;" id="removeMemberModal"
+     onclick="if(event.target===this)this.style.display='none';">
+    <div style="background:var(--background-color); border:1px solid var(--form-border-color); border-radius:10px; padding:22px; width:340px; max-width:94vw;">
+        <h3 style="margin-top:0;">Remove Collaborator?</h3>
+        <p style="font-size:14px; opacity:0.7; margin:0 0 16px;">They will lose access to this project.</p>
+        <form method="POST" id="removeMemberForm">
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('removeMemberModal').style.display='none'">Cancel</button>
+                <button type="submit" style="color:#e74c3c; border-color:#e74c3c44;">Remove</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Color picker sync
+document.querySelector('input[type="color"][name="color"]').addEventListener('input', function() {
+    document.getElementById('colorHex').value = this.value;
+});
+function syncColorPicker(val) {
+    if (/^#[0-9a-fA-F]{6}$/.test(val))
+        document.querySelector('input[type="color"][name="color"]').value = val;
+}
+
+// Activity log loader
+async function loadActivity() {
+    var btn = document.getElementById('loadActivityBtn');
+    var log = document.getElementById('activityLog');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+        var data = await fetch('/projects/<%= projectId %>/activity').then(r=>r.json());
+        if (!data || !data.length) {
+            log.innerHTML = '<p style="font-size:13px; opacity:0.45; margin:0;">No activity recorded yet.</p>';
+        } else {
+            log.innerHTML = '<div style="max-height:300px; overflow-y:auto;">' +
+                data.map(function(a) {
+                    var d = new Date(a.at);
+                    var ds = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+                    return '<div style="display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--form-border-color); font-size:13px;">' +
+                        '<span style="opacity:0.5; white-space:nowrap; font-size:12px;">' + ds + '</span>' +
+                        '<span style="flex:1;"><strong>' + (a.userName || 'Someone') + '</strong> ' + (a.action || '') + '</span>' +
+                        '</div>';
+                }).join('') +
+                '</div>';
+        }
+    } catch(e) {
+        log.innerHTML = '<p style="font-size:13px; color:#e74c3c; margin:0;">Failed to load activity.</p>';
+    }
+    btn.disabled = false; btn.textContent = 'Refresh';
+}
+
+function copyLink(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    inp.select(); inp.setSelectionRange(0, 99999);
+    document.execCommand('copy');
+    var orig = btn.textContent; btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+}
+
+function confirmRemoveMember(userId) {
+    var origForm = document.getElementById('removeForm-' + userId);
+    if (!origForm) return;
+    document.getElementById('removeMemberForm').action = origForm.action;
+    document.getElementById('removeMemberModal').style.display = 'flex';
+}
+
+// ── Collaborator search & invite ───────────────────────────────────────────────
+var _inviteSearchTimer = null;
+var _selectedUserId = null, _selectedUserEmail = null;
+var _inviteSearchQuery = '';
+
+function searchCollabUsers(q) {
+    _inviteSearchQuery = q;
+    var results = document.getElementById('inviteResults');
+    var noUser = document.getElementById('noUserFound');
+    var selected = document.getElementById('selectedUser');
+    if (selected.style.display !== 'none') return;
+    results.style.display = 'none'; noUser.style.display = 'none';
+    document.getElementById('sendEmailInviteBtn').style.display = 'none';
+    _selectedUserEmail = null; _selectedUserId = null;
+    var query = q.trim();
+    if (query.length < 2) return;
+    clearTimeout(_inviteSearchTimer);
+    _inviteSearchTimer = setTimeout(function() {
+        fetch('/api/users/search?q=' + encodeURIComponent(query), {
+            headers: { 'Accept': 'application/json' }
+        }).then(function(r) {
+            if (!r.ok) throw new Error('Search failed');
+            return r.json();
+        }).then(function(data) {
+            if (document.getElementById('inviteSearch').value.trim() !== query) return;
+            results.replaceChildren();
+            if (data.users && data.users.length > 0) {
+                data.users.forEach(function(user) {
+                    var item = document.createElement('button');
+                    item.type = 'button';
+                    item.style.cssText = 'display:block;width:100%;padding:9px 12px;text-align:left;border:0;border-bottom:1px solid var(--form-border-color);border-radius:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;';
+                    item.addEventListener('mouseenter', function() { item.style.background = 'var(--form-bg-color)'; });
+                    item.addEventListener('mouseleave', function() { item.style.background = 'transparent'; });
+
+                    var name = document.createElement('strong');
+                    name.textContent = user.name || user.username || 'User';
+                    item.appendChild(name);
+                    if (user.username) {
+                        var username = document.createElement('span');
+                        username.textContent = ' @' + user.username;
+                        username.style.cssText = 'opacity:0.5;font-size:12px;';
+                        item.appendChild(username);
+                    }
+                    var email = document.createElement('span');
+                    email.textContent = user.email || '';
+                    email.style.cssText = 'display:block;font-size:12px;opacity:0.55;';
+                    item.appendChild(email);
+                    item.addEventListener('click', function() {
+                        selectCollab(user._id, user.email, user.name || user.username || user.email, user.username || '');
+                    });
+                    results.appendChild(item);
+                });
+                results.style.display = 'block';
+                noUser.style.display = 'none';
+            } else {
+                results.style.display = 'none';
+                document.getElementById('noUserEmail').textContent = query;
+                noUser.style.display = 'flex';
+                noUser.style.alignItems = 'center';
+                _selectedUserEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query) ? query.toLowerCase() : null;
+                document.getElementById('sendEmailInviteBtn').style.display = _selectedUserEmail ? '' : 'none';
+            }
+        }).catch(function() {
+            if (typeof showToast === 'function') showToast('Could not search for users.', 'error');
+        });
+    }, 350);
+}
+
+function selectCollab(id, email, name, username) {
+    _selectedUserId = id; _selectedUserEmail = email;
+    document.getElementById('inviteResults').style.display = 'none';
+    document.getElementById('noUserFound').style.display = 'none';
+    document.getElementById('sendEmailInviteBtn').style.display = 'none';
+    var selectedName = document.getElementById('selectedUserName');
+    selectedName.replaceChildren();
+    var nameNode = document.createElement('strong');
+    nameNode.textContent = name;
+    selectedName.appendChild(nameNode);
+    var details = document.createElement('span');
+    details.textContent = (username ? ' @' + username : '') + ' (' + email + ')';
+    details.style.cssText = 'opacity:0.5;font-size:12px;';
+    selectedName.appendChild(details);
+    var sel = document.getElementById('selectedUser');
+    sel.style.display = 'flex';
+    document.getElementById('inviteSearch').value = name;
+}
+
+function clearInviteSelection() {
+    _selectedUserId = null; _selectedUserEmail = null;
+    document.getElementById('selectedUser').style.display = 'none';
+    document.getElementById('noUserFound').style.display = 'none';
+    document.getElementById('sendEmailInviteBtn').style.display = 'none';
+    document.getElementById('inviteSearch').value = '';
+}
+
+function confirmAddCollab() {
+    if (!_selectedUserId && !_selectedUserEmail) return;
+    var permission = document.getElementById('invitePermission').value;
+    fetch('/projects/<%= projectId %>/settings/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ userId: _selectedUserId, email: _selectedUserEmail, permission: permission })
+    }).then(function(r) { return r.json().then(function(data) { return { response: r, data: data }; }); }).then(function(result) {
+        var data = result.data;
+        if (!result.response.ok || !data.ok) throw new Error(data.error || 'Failed to add collaborator.');
+        if (data.ok) {
+            if (typeof showToast === 'function') showToast(data.message || 'Added!', 'success');
+            clearInviteSelection();
+            setTimeout(function() { window.location.reload(); }, 900);
+        }
+    }).catch(function(error) { if (typeof showToast === 'function') showToast(error.message || 'Network error', 'error'); });
+}
+
+function sendEmailInvite() {
+    if (!_selectedUserEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_selectedUserEmail)) return;
+    var permission = document.getElementById('invitePermission').value;
+    var button = document.getElementById('sendEmailInviteBtn');
+    button.disabled = true;
+    fetch('/projects/<%= projectId %>/settings/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email: _selectedUserEmail, permission: permission })
+    }).then(function(r) { return r.json().then(function(data) { return { response: r, data: data }; }); }).then(function(result) {
+        var data = result.data;
+        if (!result.response.ok || !data.ok) throw new Error(data.error || 'Could not send invitation.');
+        if (typeof showToast === 'function') showToast(data.message || 'Invitation sent.', 'success');
+        clearInviteSelection();
+        setTimeout(function() { window.location.reload(); }, 900);
+    }).catch(function(error) {
+        if (typeof showToast === 'function') showToast(error.message || 'Network error', 'error');
+    }).finally(function() { button.disabled = false; });
+}
+
+document.addEventListener('click', function(e) {
+    var results = document.getElementById('inviteResults');
+    var searchInp = document.getElementById('inviteSearch');
+    if (results && searchInp && !searchInp.contains(e.target) && !results.contains(e.target))
+        results.style.display = 'none';
+});
+</script>

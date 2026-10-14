@@ -1,0 +1,129 @@
+<% var name = "Home"; %>
+
+<style>
+    .home-layout {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 24px;
+        align-items: start;
+    }
+    @media (max-width: 700px) {
+        .home-layout { grid-template-columns: 1fr; }
+        .home-sidebar { order: -1; }
+    }
+    .section-heading { margin-bottom: 0.75em; opacity: 0.7; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .upcoming-list { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; overflow: hidden; margin-bottom: 28px; }
+    .upcoming-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--form-border-color); font-size: 14px; }
+    .upcoming-item:last-child { border-bottom: none; }
+    .upcoming-due { font-size: 12px; opacity: 0.5; margin-left: auto; white-space: nowrap; }
+    .recent-card { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .recent-card h3 { margin: 0; font-size: 15px; }
+    .recent-card .meta { font-size: 12px; opacity: 0.5; }
+    .recent-card .desc { font-size: 13px; opacity: 0.75; line-height: 1.5; margin: 0; }
+    .recent-card .actions { display: flex; gap: 8px; margin-top: 4px; }
+    .stats-sidebar { display: flex; flex-direction: column; gap: 10px; }
+    .stat-card { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 14px 16px; text-align: center; cursor: pointer; transition: opacity 0.15s; text-decoration: none; color: inherit; display: block; }
+    .stat-card:hover { opacity: 0.8; }
+    .stat-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .stat-label { font-size: 12px; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.05em; }
+</style>
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 24px; flex-wrap:wrap; gap:10px;">
+    <h2 style="margin:0;">Welcome back<% if (user && user.name) { %>, <%= user.name %><% } %>!</h2>
+    <button onclick="window.location.href='/projects/add'" style="padding:7px 18px; font-size:14px;">+ New Project</button>
+</div>
+
+<div class="home-layout">
+    <!-- Main column -->
+    <div class="home-main">
+        <p class="section-heading">Remaining Tasks</p>
+        <% if (locals.upcomingTasks && upcomingTasks.length > 0) { %>
+            <div class="upcoming-list">
+                <% upcomingTasks.forEach(function(task) { %>
+                    <div class="upcoming-item">
+                        <span style="font-size:16px; opacity:0.4;">◻</span>
+                        <span><%= task.title %></span>
+                        <% if (task.due) { %>
+                            <span class="upcoming-due humanized-date" data-date="<%= task.due %>"></span>
+                        <% } %>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div class="upcoming-list">
+                <div class="upcoming-item" style="opacity:0.5; font-style:italic; justify-content:center;">All caught up: no remaining tasks.</div>
+            </div>
+        <% } %>
+
+        <p class="section-heading">Recent Projects</p>
+        <% if (recentProjects.length > 0) { %>
+            <% recentProjects.forEach(function(project) { %>
+                <div class="recent-card" <% if (project.color) { %>style="border-left: 4px solid <%= project.color %>;"<% } %>>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <% if (project.color) { %><span style="width:10px; height:10px; border-radius:50%; background:<%= project.color %>; flex-shrink:0; display:inline-block;"></span><% } %>
+                        <h3><%= project.name %></h3>
+                    </div>
+                    <div class="meta"><%= project.category || 'Uncategorized' %> &middot; Updated <span class="humanized-date" data-date="<%= project.lastUpdated %>"></span></div>
+                    <% if (project.description) { %>
+                        <p class="desc"><%= project.description %></p>
+                    <% } %>
+                    <div class="actions">
+                        <button onclick="window.location.href='/projects/<%= project._id %>'" style="font-size:13px; padding:6px 14px;">Open</button>
+                        <button onclick="window.open('/projects/<%= project._id %>', '_blank')" style="font-size:13px; padding:6px 14px;">New Tab</button>
+                    </div>
+                </div>
+            <% }) %>
+            <p style="font-size:13px; opacity:0.55; margin-top:4px;"><a href="/projects">View all projects →</a></p>
+        <% } else { %>
+            <p style="opacity:0.45;">No projects yet. <a href="/projects/add">Create your first one.</a></p>
+        <% } %>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="home-sidebar">
+        <% if (locals.stats) { %>
+            <p class="section-heading">Stats</p>
+            <div class="stats-sidebar">
+                <a href="/projects" class="stat-card">
+                    <div class="stat-num"><%= stats.projects %></div>
+                    <div class="stat-label">Projects</div>
+                </a>
+                <a href="/projects" class="stat-card">
+                    <div class="stat-num"><%= stats.characters %></div>
+                    <div class="stat-label">Characters</div>
+                </a>
+                <a href="/projects" class="stat-card">
+                    <div class="stat-num"><%= stats.docs %></div>
+                    <div class="stat-label">Docs</div>
+                </a>
+                <a href="/projects" class="stat-card">
+                    <div class="stat-num"><%= stats.tasks %></div>
+                    <div class="stat-label">Total Tasks</div>
+                </a>
+                <% if (stats.tasks > 0) { %>
+                <div class="stat-card" style="cursor:default;">
+                    <% var remaining = locals.upcomingTasks ? upcomingTasks.length : 0; %>
+                    <div style="font-size:12px; opacity:0.55; margin-bottom:6px; text-align:left;">Task Progress</div>
+                    <% if (remaining === 0) { %>
+                        <div style="font-size:13px; color:#27ae60; font-weight:600; text-align:left;">All caught up!</div>
+                    <% } else { %>
+                        <div style="font-size:13px; opacity:0.75; margin-bottom:6px; text-align:left;"><%= remaining %>+ remaining</div>
+                        <div style="height:6px; background:var(--form-border-color); border-radius:3px; overflow:hidden;">
+                            <div style="height:100%; background:var(--link-color); border-radius:3px; width:<%- Math.max(5, Math.round((1 - remaining/Math.max(stats.tasks,1))*100)) %>%;"></div>
+                        </div>
+                    <% } %>
+                </div>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<button style="position: absolute; bottom: 1%; right: 1%; width: 5vw; height: 5vw; border-radius: 50%; font-size: 200%;" onclick="window.location.replace('/projects/add')">+</button>
+
+<script>
+    document.querySelectorAll('.humanized-date').forEach(function(el) {
+        var d = el.getAttribute('data-date');
+        if (d && typeof moment !== 'undefined') el.textContent = moment(d).fromNow();
+    });
+</script>

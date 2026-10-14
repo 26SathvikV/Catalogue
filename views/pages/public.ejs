@@ -1,0 +1,229 @@
+<% var name = "Explore"; %>
+<% var savedSet = new Set(locals.savedIds || []); %>
+
+<style>
+    .explore-wrap { max-width: 960px; margin: 0 auto; }
+    .explore-toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .explore-toolbar input[type="text"] { flex: 1; min-width: 180px; font-size: 14px; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--form-border-color); background: var(--form-bg-color); color: inherit; }
+    .explore-toolbar input[type="text"]:focus { outline: none; border-color: var(--link-color); }
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .filter-pill { font-size: 12px; padding: 4px 12px; border-radius: 16px; border: 1px solid var(--form-border-color); background: var(--form-bg-color); color: inherit; cursor: pointer; transition: background 0.15s; }
+    .filter-pill.active { background: var(--button-bg-color); border-color: transparent; }
+    .filter-pill:hover:not(.active) { opacity: 0.75; }
+    .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .project-card {
+        border: 1px solid var(--form-border-color); border-radius: 10px;
+        padding: 18px 18px 12px; background: var(--form-bg-color);
+        color: inherit; display: flex; flex-direction: column; gap: 8px;
+        transition: box-shadow 0.15s, opacity 0.15s;
+    }
+    .project-card:hover { opacity: 0.9; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .project-card h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+    .card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--form-border-color); opacity: 0.75; background: var(--background-color); }
+    .proj-desc { font-size: 13px; opacity: 0.7; margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.5; flex: 1; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; border-top: 1px solid var(--form-border-color); padding-top: 10px; gap: 8px; }
+    .card-meta { opacity: 0.5; flex: 1; }
+    .card-actions { display: flex; gap: 6px; }
+    .action-btn { background: none; border: 1px solid var(--form-border-color); border-radius: 6px; cursor: pointer; padding: 3px 9px; font-size: 12px; color: inherit; display: flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
+    .action-btn:hover { opacity: 0.7; }
+    .action-btn.liked { color: #e74c3c; border-color: #e74c3c55; }
+    .action-btn.saved { color: #27ae60; border-color: #27ae6055; }
+    .card-link { text-decoration: none; color: inherit; cursor: pointer; }
+    .no-results { text-align: center; opacity: 0.45; margin-top: 50px; font-size: 14px; grid-column: 1/-1; }
+</style>
+
+<div class="explore-wrap">
+    <h2 style="margin-bottom:16px;">Explore Public Projects</h2>
+
+    <div class="explore-toolbar">
+        <input type="text" id="searchInput" placeholder="Search by name, category, tags, or description…" oninput="applyFilters()">
+        <button type="button" onclick="toggleAdvanced()" id="advToggleBtn" style="font-size:13px; padding:7px 14px; white-space:nowrap;">Advanced ▾</button>
+    </div>
+    <div id="advancedPanel" style="display:none; background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:8px; padding:14px; margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; align-items:end;">
+            <div>
+                <label style="font-size:11px; opacity:0.6; display:block; margin-bottom:3px;">Category</label>
+                <input type="text" id="advCat" placeholder="e.g. Novel" oninput="applyFilters()" style="width:100%; box-sizing:border-box; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; opacity:0.6; display:block; margin-bottom:3px;">Group</label>
+                <input type="text" id="advGroup" placeholder="e.g. Summer 2026" oninput="applyFilters()" style="width:100%; box-sizing:border-box; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; opacity:0.6; display:block; margin-bottom:3px;">Tags</label>
+                <input type="text" id="advTags" placeholder="e.g. fantasy, draft" oninput="applyFilters()" style="width:100%; box-sizing:border-box; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; opacity:0.6; display:block; margin-bottom:3px;">Updated After</label>
+                <input type="date" id="advAfter" onchange="applyFilters()" style="width:100%; box-sizing:border-box; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; opacity:0.6; display:block; margin-bottom:3px;">Updated Before</label>
+                <input type="date" id="advBefore" onchange="applyFilters()" style="width:100%; box-sizing:border-box; font-size:13px;">
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+                <button type="button" onclick="clearAdvanced()" style="font-size:12px; padding:5px 10px;">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-pills" id="filterPills">
+        <span style="font-size:12px; opacity:0.5;">Filter:</span>
+        <button class="filter-pill active" data-filter="all" onclick="setFilter('all', this)">All</button>
+        <button class="filter-pill" data-filter="saved" onclick="setFilter('saved', this)">Saved</button>
+        <%
+            var categories = [];
+            var catSet = {};
+            projects.forEach(function(p) { if (p.category && !catSet[p.category]) { catSet[p.category] = true; categories.push(p.category); } });
+        %>
+        <% categories.forEach(function(cat) { %>
+            <button class="filter-pill" data-filter="cat:<%= cat %>" onclick="setFilter('cat:<%= cat %>', this)"><%= cat %></button>
+        <% }) %>
+    </div>
+
+    <div class="project-grid" id="projectGrid">
+        <% if (projects.length === 0) { %>
+            <p class="no-results">No public projects yet.</p>
+        <% } %>
+        <% projects.forEach(function(p) { %>
+            <%
+                var isSaved = savedSet.has(p._id.toString());
+                var isLiked = p.likedBy && p.likedBy.some(function(id) { return id.toString() === (user ? user.toString() : ''); });
+            %>
+            <div class="project-card"
+                 data-name="<%= (p.name || '').toLowerCase() %>"
+                 data-cat="<%= (p.category || '').toLowerCase() %>"
+                 data-desc="<%= (p.description || '').toLowerCase() %>"
+                 data-group="<%= (p.group || '').toLowerCase() %>"
+                 data-tags="<%= ((p.tags || []).join(',')).toLowerCase() %>"
+                 data-date="<%= p.lastUpdated ? new Date(p.lastUpdated).toISOString() : '' %>"
+                 data-saved="<%= isSaved ? 'true' : 'false' %>">
+                <a href="/projects/<%= p._id %>" class="card-link">
+                    <h3><%= p.name %></h3>
+                </a>
+                <div class="card-badges">
+                    <% if (p.category) { %><span class="badge"><%= p.category %></span><% } %>
+                </div>
+                <% if (p.description) { %><p class="proj-desc"><%= p.description %></p><% } %>
+                <div class="card-footer">
+                    <span class="card-meta">
+                        <% if (p.owner && p.owner.name) { %>by <%= p.owner.name %> &middot; <% } %>
+                        <span class="humanized-date" data-date="<%= p.lastUpdated ? new Date(p.lastUpdated).toISOString() : '' %>"></span>
+                    </span>
+                    <div class="card-actions">
+                        <button class="action-btn <%= isLiked ? 'liked' : '' %>"
+                                id="like-<%= p._id %>"
+                                onclick="toggleLike('<%= p._id %>', this)">
+                            ♥ <span class="like-count"><%= p.likes || 0 %></span>
+                        </button>
+                        <button class="action-btn <%= isSaved ? 'saved' : '' %>"
+                                id="save-<%= p._id %>"
+                                onclick="toggleSave('<%= p._id %>', this)">
+                            <%= isSaved ? '★ Saved' : '☆ Save' %>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+    <p id="noResultsMsg" class="no-results" style="display:none;">No projects match your search.</p>
+</div>
+
+<script>
+var activeFilter = 'all';
+
+function setFilter(filter, btn) {
+    activeFilter = filter;
+    document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    applyFilters();
+}
+
+function toggleAdvanced() {
+    var p = document.getElementById('advancedPanel');
+    var open = p.style.display !== 'none';
+    p.style.display = open ? 'none' : 'block';
+    document.getElementById('advToggleBtn').textContent = open ? 'Advanced ▾' : 'Advanced ▲';
+}
+
+function clearAdvanced() {
+    ['advCat','advGroup','advTags','advAfter','advBefore'].forEach(function(id) {
+        document.getElementById(id).value = '';
+    });
+    applyFilters();
+}
+
+function applyFilters() {
+    var q     = document.getElementById('searchInput').value.toLowerCase().trim();
+    var cat   = document.getElementById('advCat').value.toLowerCase().trim();
+    var grp   = document.getElementById('advGroup').value.toLowerCase().trim();
+    var tags  = document.getElementById('advTags').value.toLowerCase().trim();
+    var after = document.getElementById('advAfter').value;
+    var before= document.getElementById('advBefore').value;
+    var afterTs  = after  ? new Date(after).getTime()  : 0;
+    var beforeTs = before ? new Date(before).getTime() : Infinity;
+    var cards = document.querySelectorAll('#projectGrid .project-card');
+    var visible = 0;
+    cards.forEach(function(card) {
+        var textMatch = !q ||
+            (card.dataset.name  || '').includes(q) ||
+            (card.dataset.cat   || '').includes(q) ||
+            (card.dataset.desc  || '').includes(q) ||
+            (card.dataset.tags  || '').includes(q) ||
+            (card.dataset.group || '').includes(q);
+        var catMatch  = !cat  || (card.dataset.cat   || '').includes(cat);
+        var grpMatch  = !grp  || (card.dataset.group || '').includes(grp);
+        var tagsMatch = !tags || tags.split(',').every(function(t) {
+            return t.trim() === '' || (card.dataset.tags || '').includes(t.trim());
+        });
+        var dateStr = card.dataset.date || '';
+        var dateTs  = dateStr ? new Date(dateStr).getTime() : 0;
+        var dateMatch = (!afterTs || dateTs >= afterTs) && (beforeTs === Infinity || dateTs <= beforeTs);
+        var filterMatch = true;
+        if (activeFilter === 'saved') {
+            filterMatch = card.dataset.saved === 'true';
+        } else if (activeFilter.startsWith('cat:')) {
+            filterMatch = (card.dataset.cat || '') === activeFilter.slice(4).toLowerCase();
+        }
+        var show = textMatch && catMatch && grpMatch && tagsMatch && dateMatch && filterMatch;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('noResultsMsg').style.display = visible === 0 && (q || cat || grp || tags || after || before || activeFilter !== 'all') ? 'block' : 'none';
+}
+
+function toggleLike(projectId, btn) {
+    fetch('/projects/' + projectId + '/like', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.querySelector('.like-count').textContent = data.likes;
+            if (data.liked) btn.classList.add('liked');
+            else btn.classList.remove('liked');
+        });
+}
+
+function toggleSave(projectId, btn) {
+    fetch('/projects/' + projectId + '/save', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var card = btn.closest('.project-card');
+            if (data.saved) {
+                btn.classList.add('saved');
+                btn.textContent = '★ Saved';
+                card.dataset.saved = 'true';
+            } else {
+                btn.classList.remove('saved');
+                btn.textContent = '☆ Save';
+                card.dataset.saved = 'false';
+            }
+            // Re-apply filter if we're in saved view
+            if (activeFilter === 'saved') applyFilters();
+        });
+}
+
+document.querySelectorAll('.humanized-date[data-date]').forEach(function(el) {
+    var d = el.getAttribute('data-date');
+    if (d && typeof moment !== 'undefined') el.textContent = moment(d).fromNow();
+});
+</script>

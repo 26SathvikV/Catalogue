@@ -1,0 +1,157 @@
+<% var name = "Characters"; %>
+
+<style>
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 2rem;
+        padding: 2rem;
+    }
+
+    .card {
+        background: var(--form-bg-color);
+        border: 1px solid var(--form-border-color);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--text-color);
+        transition: box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .card img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 1rem;
+    }
+
+    .card h3 {
+        margin-bottom: 0.5rem;
+        color: var(--heading-color);
+        font-family: var(--h3-font-family);
+    }
+
+    .card p {
+        margin: 0.3rem 0;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        font-family: var(--p-font-family);
+    }
+
+    .trait-snippet {
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        color: var(--link-color);
+        font-family: var(--p-font-family);
+    }
+
+    .add-character-btn {
+        position: fixed;
+        bottom: 2%;
+        right: 2%;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        font-size: 2rem;
+        background-color: var(--button-bg-color);
+        color: var(--text-color);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        transition: background-color 0.2s;
+    }
+
+    .add-character-btn:hover {
+        background-color: var(--button-hover-bg-color);
+    }
+</style>
+
+<div style="position: absolute;left: 0%;width: -webkit-fill-available;margin: 0% 10%;">
+    <input type="text" id="search" style="float:right; right:10%;" placeholder="Search..." onkeyup="refreshCharacters()"/>
+</div>
+
+<br><br>
+
+<div class="card-container">
+    <% if (characters && characters.length > 0) { %>
+        <% characters.forEach(character => { %>
+            <a href="/projects/<%= project._id %>/characters/<%= character._id %>" class="card" target="_blank" 
+               data-character='<%- JSON.stringify(character) %>' id="<%= character %>">
+                <img src="<%= character.icon || character.logo %>" alt="<%= character.name %>"/>
+                <h3 style="margin-bottom: -1em;"><%= character.name %></h3>
+                <h5 style="margin-bottom: 1.5em;"><%= character.role %></h5>
+                <p>
+                    <% if (character.description && character.description.length > 80) { %>
+                        <%= character.description.substring(0, 80) %>...
+                    <% } else { %>
+                        <%= character.description || 'No Description' %>
+                    <% } %>
+                </p>
+
+                <% if (character.traits && character.traits.length > 0) { %>
+                    <div class="trait-snippet">
+                        <strong>Traits:</strong>
+                        <% character.traits.slice(0, 2).forEach(trait => { %>
+                            <div><%= trait.key %>: <%= trait.value %></div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </a>
+        <% }); %>
+    <% } else { %>
+        <p style="text-align:center;">No characters added yet.</p>
+    <% } %>
+</div>
+
+<button class="add-character-btn" onclick="window.location.href='/projects/<%= project._id %>/addCharacter'">+</button>
+
+<script>
+    refreshCharacters();
+
+    document.querySelectorAll('.humanized-date').forEach((element) => {
+        const rawDate = element.getAttribute('data-date');
+        const humanized = moment(rawDate).fromNow();
+        element.textContent = humanized;
+    });
+
+    function refreshCharacters() {
+        const search = document.getElementById("search").value.toLowerCase();
+
+        document.querySelectorAll(".card").forEach(card => {
+            const character = JSON.parse(card.dataset.character);
+
+            if (checkSearch(character, search)) {
+                card.style.display = "flex";
+            } else {
+                card.style.display = "none";
+            }
+        });
+    }
+    
+    function checkSearch(character, searchTerm) {
+        if (!searchTerm)
+            return true;
+
+        const inName = character.name?.toLowerCase().includes(searchTerm);
+        const inNicknames = character.nicknames?.some(
+            t => t.key.toLowerCase().includes(searchTerm) || t.value.toLowerCase().includes(searchTerm)
+        );
+        const inRole = character.role?.toLowerCase().includes(searchTerm);
+        const inDescription = character.description?.toLowerCase().includes(searchTerm);
+        const inTraits = character.traits?.some(
+            t => t.key.toLowerCase().includes(searchTerm) || t.value.toLowerCase().includes(searchTerm)
+        );
+
+        return inName || inNicknames || inRole || inDescription || inTraits;
+    }
+</script>

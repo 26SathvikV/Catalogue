@@ -1,0 +1,111 @@
+<% var name = "Home"; %>
+
+<style>
+    .project-home { max-width: 800px; margin: 0 auto; }
+    .project-meta { margin-bottom: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .meta-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 20px; padding: 4px 12px; font-size: 12px; opacity: 0.85; }
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 14px;
+        margin-bottom: 32px;
+    }
+    .stat-card {
+        border: 1px solid var(--form-border-color);
+        border-radius: 8px;
+        padding: 18px 16px;
+        background: var(--form-bg-color);
+        text-align: center;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+    .stat-card:hover { opacity: 0.8; }
+    .stat-card:active { opacity: 0.6; }
+    .stat-num { font-size: 32px; font-weight: bold; margin: 0; line-height: 1; }
+    .stat-label { font-size: 13px; opacity: 0.65; margin: 6px 0 0; }
+    .section-heading { font-size: 13px; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
+</style>
+
+<div class="project-home">
+    <h2 style="margin-top:0; margin-bottom:8px;"><%= project.name %></h2>
+
+    <% if (project.description) { %>
+        <p style="margin-bottom:18px; font-size:15px; opacity:0.8; line-height:1.6; max-width:640px;"><%= project.description %></p>
+    <% } %>
+
+    <div class="project-meta">
+        <span class="meta-pill">Category: <%= project.category || 'Uncategorized' %></span>
+        <span class="meta-pill humanized-date" data-date="<%= project.lastUpdated %>">Updated: …</span>
+        <%
+            var vis = project.visibility || 'private';
+            var visLabel = vis === 'public' ? 'Public' : vis === 'unlisted' ? 'Unlisted' : vis === 'collaborators_only' ? 'Collaborators Only' : 'Private (only you)';
+        %>
+        <span class="meta-pill">Visibility: <%= visLabel %></span>
+    </div>
+
+    <p class="section-heading">Overview</p>
+    <div class="stat-grid">
+        <a href="/projects/<%= projectId %>/characters" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= project.characters.length %></p>
+                <p class="stat-label">Characters</p>
+            </div>
+        </a>
+        <a href="/projects/<%= projectId %>/timeline" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= project.timeline.length %></p>
+                <p class="stat-label">Timeline Events</p>
+            </div>
+        </a>
+        <a href="/projects/<%= projectId %>/docs" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= project.docs.length %></p>
+                <p class="stat-label">Documents</p>
+            </div>
+        </a>
+        <a href="/projects/<%= projectId %>/cards" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= project.cards.length %></p>
+                <p class="stat-label">Cards</p>
+            </div>
+        </a>
+        <a href="/projects/<%= projectId %>/taskManager" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= (project.tasks || []).length %></p>
+                <p class="stat-label">Tasks</p>
+            </div>
+        </a>
+        <a href="/projects/<%= projectId %>/projects" style="text-decoration:none; color:inherit;">
+            <div class="stat-card">
+                <p class="stat-num"><%= project.relatedProjects.length %></p>
+                <p class="stat-label">Related Projects</p>
+            </div>
+        </a>
+    </div>
+
+    <% if (project.shared && project.shared.length > 0) { %>
+        <p class="section-heading">Access</p>
+        <p style="font-size:14px; opacity:0.7;">Shared with <strong><%= project.shared.length %></strong> collaborator<%= project.shared.length !== 1 ? 's' : '' %>. &nbsp;<a href="/projects/<%= projectId %>/share">Manage sharing</a></p>
+    <% } %>
+
+    <p class="section-heading" style="margin-top:28px;">Export</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <a href="/projects/<%= projectId %>/export/md" style="font-size:13px; padding:7px 16px; border:1px solid var(--form-border-color); border-radius:6px; text-decoration:none; color:inherit; background:var(--form-bg-color);">↓ Markdown</a>
+        <a href="/projects/<%= projectId %>/export/pdf" style="font-size:13px; padding:7px 16px; border:1px solid var(--form-border-color); border-radius:6px; text-decoration:none; color:inherit; background:var(--form-bg-color);">↓ PDF</a>
+        <% var userPlan = locals.user && locals.user.plan ? locals.user.plan : 'free'; %>
+        <% if (['pro','studio'].includes(userPlan)) { %>
+            <a href="/projects/<%= projectId %>/export/epub" style="font-size:13px; padding:7px 16px; border:1px solid var(--form-border-color); border-radius:6px; text-decoration:none; color:inherit; background:var(--form-bg-color);">↓ EPUB</a>
+        <% } else { %>
+            <span style="font-size:13px; padding:7px 16px; border:1px dashed var(--form-border-color); border-radius:6px; opacity:0.4; cursor:default;" title="EPUB export is available on Pro and Studio plans">↓ EPUB (Pro+)</span>
+        <% } %>
+    </div>
+</div>
+
+<!-- Export modal not needed: direct download links -->
+
+<script>
+document.querySelectorAll('.humanized-date[data-date]').forEach(function(el) {
+    var d = el.getAttribute('data-date');
+    if (d && typeof moment !== 'undefined') el.textContent = 'Updated: ' + moment(d).fromNow();
+});
+</script>

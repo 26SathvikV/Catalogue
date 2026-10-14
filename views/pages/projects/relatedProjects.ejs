@@ -1,0 +1,64 @@
+<% var name = "Projects"; %>
+
+<style>
+    .related-card { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; }
+    .related-card h3 { margin: 0 0 4px; font-size: 15px; }
+    .related-card .meta { font-size: 12px; opacity: 0.55; margin: 0 0 8px; }
+    .related-card .desc { font-size: 13px; opacity: 0.75; margin: 0 0 12px; line-height: 1.5; }
+    .related-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .section-heading { font-size: 13px; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px; }
+    .attach-form-wrap { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 18px 20px; margin-top: 24px; }
+    .attach-form-wrap h3 { margin: 0 0 14px; font-size: 15px; }
+    .attach-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+    .attach-row select { flex: 1; min-width: 180px; }
+</style>
+
+<% if (project.relatedProjects.length > 0) { %>
+    <p class="section-heading">Attached Projects</p>
+    <% project.relatedProjects.forEach(function(related) { %>
+        <div class="related-card">
+            <h3><%= related.name %></h3>
+            <div class="meta"><%= related.category || 'Uncategorized' %> &middot; Last updated <span class="humanized-date" data-date="<%= related.lastUpdated %>"></span></div>
+            <% if (related.description) { %>
+                <p class="desc"><%= related.description %></p>
+            <% } %>
+            <div class="actions">
+                <a href="/projects/<%= related._id %>" target="_blank" rel="noopener noreferrer">
+                    <button type="button">Open</button>
+                </a>
+                <form method="POST" action="/projects/<%= project._id %>/projects/remove/<%= related._id %>" style="margin:0;">
+                    <button type="submit" style="opacity:0.7;">Un-attach</button>
+                </form>
+            </div>
+        </div>
+    <% }) %>
+<% } else { %>
+    <p style="text-align:center; opacity:0.5;">No attached projects yet.</p>
+<% } %>
+
+<% if (otherProjects.length > 0) { %>
+    <div class="attach-form-wrap">
+        <h3>Attach a Project</h3>
+        <p style="font-size:13px; opacity:0.65; margin:0 0 12px;">Attaching two projects links them and escalates both to the higher visibility level.</p>
+        <form method="POST" action="/projects/<%= project._id %>/projects/add">
+            <div class="attach-row">
+                <select name="relatedProjectId" required>
+                    <option disabled selected value="">-- Select a project --</option>
+                    <% otherProjects.forEach(function(p) { %>
+                        <option value="<%= p._id %>"><%= p.name %></option>
+                    <% }) %>
+                </select>
+                <button type="submit">Attach</button>
+            </div>
+        </form>
+    </div>
+<% } else { %>
+    <p style="text-align:center; opacity:0.5; margin-top:24px;">No other projects available to attach.</p>
+<% } %>
+
+<script>
+document.querySelectorAll('.humanized-date[data-date]').forEach(function(el) {
+    var d = el.getAttribute('data-date');
+    if (d && typeof moment !== 'undefined') el.textContent = moment(d).fromNow();
+});
+</script>

@@ -1,0 +1,144 @@
+<% var name = event ? "Edit Timeline Event" : "Add Timeline Event"; %>
+<style>
+    .character-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .character-option {
+        cursor: pointer;
+        border: 3px solid transparent;
+        border-radius: 8px;
+        overflow: hidden;
+        text-align: center;
+        transition: border 0.3s ease;
+    }
+
+    .character-option input[type="checkbox"] {
+        display: none;
+    }
+
+    .character-option img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+
+    .character-option.selected {
+        border-color: var(--button-bg-color);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .character-option:hover img {
+        transform: scale(1.05);
+    }
+
+    .character-option label {
+        display: block;
+        font-family: var(--p-font-family);
+        color: var(--text-color);
+        font-size: 0.9em;
+        padding: 5px 0;
+    }
+
+    .datetime-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 16px;
+        margin-bottom: 25px;
+    }
+
+    .datetime-grid label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+</style>
+
+<form method="POST" action="<%= event ? '/projects/' + projectId + '/timeline/' + event._id + '/edit' : '/projects/' + projectId + '/timeline' %>" style="max-width: 800px; margin: -2em auto 0;">
+    <label style="display: block; margin-bottom: 15px; font-family: var(--p-font-family); color: var(--text-color);">
+        <h4>Title</h4><br>
+        <input type="text" name="title" value="<%= event ? event.title : '' %>" style="width: -webkit-fill-available; padding: 10px; border: 1px solid var(--form-border-color); border-radius: 5px; text-align: center; align-self: center;" required>
+    </label>
+
+    <br><br>
+
+    <label style="display: block; margin-bottom: 15px; font-family: var(--p-font-family); color: var(--text-color);">
+        <h4>Description</h4><br>
+        <textarea name="description" rows="4" style="width: -webkit-fill-available; padding: 10px; border: 1px solid var(--form-border-color); border-radius: 5px; text-align: center;" required><%= event ? event.description : '' %></textarea>
+    </label>
+
+    <br><br>
+
+    <div class="datetime-grid">
+        <label>
+            <h4>Month</h4>
+            <select name="month" style="text-align: center;">
+                <% ['January','February','March','April','May','June','July','August','September','October','November','December'].forEach((m, i) => { %>
+                <option value="<%= i %>" <%= event && i === new Date(event.date).getMonth() ? 'selected' : '' %>><%= m %></option>
+                <% }) %>
+            </select>
+        </label>
+
+        <label>
+            <h4>Day</h4>
+            <input style="text-align: center;" type="number" name="day" value="<%= event ? new Date(event.date).getDate() : '' %>" min="1" max="31" required>
+        </label>
+
+        <label>
+            <h4>Year</h4>
+            <input style="text-align: center;" type="number" name="year" value="<%= event ? new Date(event.date).getFullYear() : '' %>" placeholder="e.g. -450 for 450 BCE" required>
+        </label>
+
+        <br>
+
+        <label>
+            <h4>Time</h4>
+            <input style="text-align: center;" type="time" name="time" value="<%= event ? new Date(event.date).toISOString().substr(11, 5) : '' %>">
+        </label>
+    </div>
+
+    <br><br>
+
+    <div style="margin-bottom: 15px; font-family: var(--p-font-family); color: var(--text-color);">
+        <h4>Related Characters</h4>
+        <div class="character-grid">
+            <% characters.forEach(char => { %>
+                <label class="character-option">
+                    <input type="checkbox" name="relatedCharacters" value="<%= char._id %>" <%= event && event.relatedCharacters.some(c => c.characterId.toString() === char._id.toString()) ? 'checked' : '' %>>
+                    <img src="<%= char.icon || '/res/default-icon.png' %>" alt="<%= char.name %>">
+                    <span><%= char.name %></span>
+                </label>
+            <% }) %>
+        </div>
+    </div>
+
+    <br>
+
+    <div style="text-align: center;">
+        <button type="submit" style="background-color: var(--button-bg-color); color: var(--button-text-color); padding: 10px 25px; border: none; border-radius: 6px; font-size: 1em; cursor: pointer; font-family: var(--p-font-family);">
+            <%= event ? 'Save Event' : 'Add Event' %>
+        </button>
+    </div>
+    
+    <br><br>
+</form>
+
+<script>
+    document.querySelectorAll('.character-option input[type="checkbox"]').forEach(input => {
+        if (input.checked) {
+            input.parentElement.classList.add('selected');
+        }
+
+        input.addEventListener('change', function () {
+            if (this.checked) {
+                this.parentElement.classList.add('selected');
+            } else {
+                this.parentElement.classList.remove('selected');
+            }
+        });
+    });
+</script>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Catalogue - Sign Up</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .color-scheme-dropdown {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .color-scheme-dropdown select {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        h1, h2, h3, p {
+            margin: 0.5em 0;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <button style="position:absolute;right:2%;top:2%;width:10%;" onclick="window.location.replace('/login')">Log In</button>
+
+    <main style="padding: 35px 100px;height: 100%;width: 100%;display: flex;justify-content: center;align-items: center;">
+        <form class="middleform" method="POST" action="/signup">
+            <input type="text" id="name" name="name" placeholder="Name" autocomplete="name"/> <br>
+            <input type="email" id="email" name="email" placeholder="Email" autocomplete="email" value="<%= typeof inviteEmail !== 'undefined' ? inviteEmail : '' %>" required/> <br>
+            <input type="password" id="pass" name="pass" placeholder="Enter Password" autocomplete="new-password"/> <br>
+            <input type="password" id="passconf" name="passconf" placeholder="Confirm Password" autocomplete="current-password"/> <br>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:8px 0 4px; cursor:pointer;">
+                <span style="font-size:12px; opacity:0.7;">Birthday (optional, enables birthday surprises)</span>
+            </label>
+            <input type="date" name="birthdate" style="width:100%; box-sizing:border-box; margin-bottom:8px;"/> <br>
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:12px; margin:4px 0 12px; cursor:pointer; text-align:left;">
+                <input type="checkbox" name="termsAccepted" required style="margin-top:2px; flex-shrink:0;">
+                <span style="opacity:0.75;">I confirm I am 13 or older and agree to the Terms of Service. Some projects may contain mature content. I will use content warnings appropriately.</span>
+            </label>
+            <button type="submit" id="input">Sign Up</button>
+        </form>
+
+        <div style="text-align:center; margin-top:16px; font-size:13px; opacity:0.5;"> or </div>
+        <a href="/auth/google" style="display:flex; align-items:center; justify-content:center; gap:10px; margin:12px auto 0; max-width:260px; padding:9px 16px; background:#fff; color:#333; border:1px solid #ccc; border-radius:6px; text-decoration:none; font-size:14px;">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Sign up with Google
+        </a>
+    </main>
+
+    <script>
+        const lightScheme = {
+            '--background-color': '#FFF0F5',
+            '--text-color': '#4B2C3D',
+            '--link-color': '#FF66B3',
+            '--link-hover-color': '#FF3399',
+            '--heading-color': '#FF80CC',
+            '--form-bg-color': '#FFFFFF',
+            '--form-border-color': '#FFD6E8',
+            '--button-bg-color': '#FF66B3',
+            '--button-hover-bg-color': '#FF3399',
+            '--table-header-bg-color': '#FFE6F0',
+            '--table-header-text-color': '#FF66B3',
+            '--blockquote-bg-color': '#FFF5FA',
+            '--blockquote-border-color': '#FF80CC',
+            '--code-bg-color': '#FFE9F2',
+            '--pre-bg-color': '#FFF5FA',
+            '--scrollbar-thumb-color': '#FF99CC',
+            '--scrollbar-track-color': '#FFE6F0',
+            'font-family': "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            'h1-font-family': "'Lobster', cursive",
+            'h2-font-family': "'Roboto', sans-serif",
+            'h3-font-family': "'Open Sans', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const darkScheme = {
+            '--background-color': '#2B1B2E',
+            '--text-color': '#FFD6E8',
+            '--link-color': '#FF80CC',
+            '--link-hover-color': '#FF66B3',
+            '--heading-color': '#FF99CC',
+            '--form-bg-color': '#3D2B3D',
+            '--form-border-color': '#FF80CC',
+            '--button-bg-color': '#FF66B3',
+            '--button-hover-bg-color': '#FF3399',
+            '--table-header-bg-color': '#3B2B3F',
+            '--table-header-text-color': '#FF80CC',
+            '--blockquote-bg-color': '#3D2B3D',
+            '--blockquote-border-color': '#FF80CC',
+            '--code-bg-color': '#4A354A',
+            '--pre-bg-color': '#3B2B3F',
+            '--scrollbar-thumb-color': '#FF80CC',
+            '--scrollbar-track-color': '#2B1B2E',
+            'font-family': "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            'h1-font-family': "'Courier New', Courier, monospace",
+            'h2-font-family': "'Arial', sans-serif",
+            'h3-font-family': "'Times New Roman', Times, serif",
+            'p-font-family': "'Verdana', sans-serif"
+        };
+
+        const retroScheme = {
+            '--background-color': '#FDF6F0',
+            '--text-color': '#3E2A28',
+            '--link-color': '#FF69B4',
+            '--link-hover-color': '#F24CA0',
+            '--heading-color': '#EF4E7B',
+            '--form-bg-color': '#FAF0E6',
+            '--form-border-color': '#CFA6A0',
+            '--button-bg-color': '#EF4E7B',
+            '--button-hover-bg-color': '#D54074',
+            '--table-header-bg-color': '#EAD7C8',
+            '--table-header-text-color': '#3E2A28',
+            '--blockquote-bg-color': '#FBE8DC',
+            '--blockquote-border-color': '#EF4E7B',
+            '--code-bg-color': '#FFF6F2',
+            '--pre-bg-color': '#F8EAE0',
+            '--scrollbar-thumb-color': '#D18B99',
+            '--scrollbar-track-color': '#FAF0E6',
+            'font-family': "'Courier New', Courier, monospace",
+            'h1-font-family': "'Raleway', sans-serif",
+            'h2-font-family': "'Playfair Display', serif",
+            'h3-font-family': "'Raleway', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const pastelScheme = {
+            '--background-color': '#F7E6F7',
+            '--text-color': '#5C415D',
+            '--link-color': '#E07CB4',
+            '--link-hover-color': '#C4579A',
+            '--heading-color': '#B45FA0',
+            '--form-bg-color': '#FFF0FA',
+            '--form-border-color': '#E8C9D8',
+            '--button-bg-color': '#D88FBF',
+            '--button-hover-bg-color': '#C46DAA',
+            '--table-header-bg-color': '#F2D2E2',
+            '--table-header-text-color': '#5C415D',
+            '--blockquote-bg-color': '#FBE8F3',
+            '--blockquote-border-color': '#B45FA0',
+            '--code-bg-color': '#FAEDF6',
+            '--pre-bg-color': '#F3E0F2',
+            '--scrollbar-thumb-color': '#D8A0C8',
+            '--scrollbar-track-color': '#F7E6F7',
+            'font-family': "'Lora', serif",
+            'h1-font-family': "'Quicksand', sans-serif",
+            'h2-font-family': "'Lora', serif",
+            'h3-font-family': "'Lora', serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const neonScheme = {
+            '--background-color': '#0D001A',
+            '--text-color': '#FAD7F2',
+            '--link-color': '#FF38A6',
+            '--link-hover-color': '#FF0EDC',
+            '--heading-color': '#F93CF3',
+            '--form-bg-color': '#190033',
+            '--form-border-color': '#FF38A6',
+            '--button-bg-color': '#FF38A6',
+            '--button-hover-bg-color': '#FF0EDC',
+            '--table-header-bg-color': '#220044',
+            '--table-header-text-color': '#FF66B3',
+            '--blockquote-bg-color': '#190033',
+            '--blockquote-border-color': '#F93CF3',
+            '--code-bg-color': '#2A004D',
+            '--pre-bg-color': '#190033',
+            '--scrollbar-thumb-color': '#F93CF3',
+            '--scrollbar-track-color': '#0D001A',
+            'font-family': "'Orbitron', sans-serif",
+            'h1-font-family': "'Audiowide', cursive",
+            'h2-font-family': "'Russo One', sans-serif",
+            'h3-font-family': "'Righteous', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const oceanScheme = {
+            '--background-color': '#EDE6F9',
+            '--text-color': '#453755',
+            '--link-color': '#9C7DD1',
+            '--link-hover-color': '#B98CF2',
+            '--heading-color': '#A88DD9',
+            '--form-bg-color': '#F7F4FD',
+            '--form-border-color': '#D5C7EB',
+            '--button-bg-color': '#B98CF2',
+            '--button-hover-bg-color': '#A276D8',
+            '--table-header-bg-color': '#DDD1F2',
+            '--table-header-text-color': '#453755',
+            '--blockquote-bg-color': '#F3EDFB',
+            '--blockquote-border-color': '#BBA6E0',
+            '--code-bg-color': '#F7F0FB',
+            '--pre-bg-color': '#EEE6F8',
+            '--scrollbar-thumb-color': '#C6B0E9',
+            '--scrollbar-track-color': '#F0EBF9',
+            'font-family': "'Segoe UI', sans-serif",
+            'h1-font-family': "'Lobster', cursive",
+            'h2-font-family': "'Open Sans', sans-serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const solarizedScheme = {
+            '--background-color': '#002B36',
+            '--text-color': '#FADCE8',
+            '--link-color': '#F471B5',
+            '--link-hover-color': '#FF8FD6',
+            '--heading-color': '#FF8FD6', 
+            '--form-bg-color': '#073642',
+            '--form-border-color': '#586E75',
+            '--button-bg-color': '#D33682',
+            '--button-hover-bg-color': '#F471B5',
+            '--table-header-bg-color': '#073642',
+            '--table-header-text-color': '#FADCE8',
+            '--blockquote-bg-color': '#073642',
+            '--blockquote-border-color': '#D33682',
+            '--code-bg-color': '#002B36',
+            '--pre-bg-color': '#073642',
+            '--scrollbar-thumb-color': '#D33682',
+            '--scrollbar-track-color': '#002B36',
+            'font-family': "'Source Code Pro', monospace",
+            'h1-font-family': "'IBM Plex Mono', monospace",
+            'h2-font-family': "'IBM Plex Sans', sans-serif",
+            'h3-font-family': "'IBM Plex Mono', monospace",
+            'p-font-family': "'Source Sans Pro', sans-serif"
+        };
+
+        const minimalScheme = {
+            '--background-color': '#FFFFFF',
+            '--text-color': '#2A2A2A',
+            '--link-color': '#E070A2',
+            '--link-hover-color': '#D05488',
+            '--heading-color': '#3B3B3B',
+            '--form-bg-color': '#FAFAFA',
+            '--form-border-color': '#EAEAEA',
+            '--button-bg-color': '#62484e',
+            '--button-hover-bg-color': '#89656d',
+            '--table-header-bg-color': '#F2F2F2',
+            '--table-header-text-color': '#3B3B3B',
+            '--blockquote-bg-color': '#F9F9F9',
+            '--blockquote-border-color': '#E070A2',
+            '--code-bg-color': '#F4F4F4',
+            '--pre-bg-color': '#F9F9F9',
+            '--scrollbar-thumb-color': '#D8D8D8',
+            '--scrollbar-track-color': '#F0F0F0',
+            'font-family': "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            'h1-font-family': "'Roboto', sans-serif",
+            'h2-font-family': "'Roboto', sans-serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const autumnScheme = {
+            '--background-color': '#3F2A28',
+            '--text-color': '#FFE6F0',
+            '--link-color': '#C47D95',
+            '--link-hover-color': '#E08AA9',
+            '--heading-color': '#D99FAF',
+            '--form-bg-color': '#5A3A37',
+            '--form-border-color': '#D6A5B4',
+            '--button-bg-color': '#A4556C',
+            '--button-hover-bg-color': '#C36C88',
+            '--table-header-bg-color': '#4E3634',
+            '--table-header-text-color': '#FFD9E0',
+            '--blockquote-bg-color': '#5A3A37',
+            '--blockquote-border-color': '#B57B91',
+            '--code-bg-color': '#3F2A28',
+            '--pre-bg-color': '#4E3634',
+            '--scrollbar-thumb-color': '#A2677D',
+            '--scrollbar-track-color': '#3F2A28',
+            'font-family': "'Georgia', serif",
+            'h1-font-family': "'Playfair Display', serif",
+            'h2-font-family': "'Georgia', serif",
+            'h3-font-family': "'Georgia', serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const forestScheme = {
+            '--background-color': '#2D1F24',
+            '--text-color': '#F2E4EA',
+            '--link-color': '#C87EA5',
+            '--link-hover-color': '#E697C0',
+            '--heading-color': '#D38CA9',
+            '--form-bg-color': '#39282D',
+            '--form-border-color': '#D6A5B4',
+            '--button-bg-color': '#8F4F6F',
+            '--button-hover-bg-color': '#A66287',
+            '--table-header-bg-color': '#47333A',
+            '--table-header-text-color': '#F2E4EA',
+            '--blockquote-bg-color': '#39282D',
+            '--blockquote-border-color': '#B57B91',
+            '--code-bg-color': '#2D1F24',
+            '--pre-bg-color': '#3A2A2F',
+            '--scrollbar-thumb-color': '#A2677D',
+            '--scrollbar-track-color': '#2D1F24',
+            'font-family': "'Georgia', serif",
+            'h1-font-family': "'Merriweather', serif",
+            'h2-font-family': "'Roboto Slab', serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const cyberpunkScheme = {
+            '--background-color': '#0C021D',
+            '--text-color': '#FFD6F2',
+            '--link-color': '#FF00B8',
+            '--link-hover-color': '#00FFF7',
+            '--heading-color': '#FA2AFF',
+            '--form-bg-color': '#1A0033',
+            '--form-border-color': '#FF00B8',
+            '--button-bg-color': '#FF00B8',
+            '--button-hover-bg-color': '#00FFF7',
+            '--table-header-bg-color': '#2B0059',
+            '--table-header-text-color': '#FF66F2',
+            '--blockquote-bg-color': '#1A0033',
+            '--blockquote-border-color': '#FA2AFF',
+            '--code-bg-color': '#2B0059',
+            '--pre-bg-color': '#1A0033',
+            '--scrollbar-thumb-color': '#FA2AFF',
+            '--scrollbar-track-color': '#0C021D',
+            'font-family': "'Share Tech Mono', monospace",
+            'h1-font-family': "'Orbitron', sans-serif",
+            'h2-font-family': "'VT323', monospace",
+            'h3-font-family': "'Russo One', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const creamsicleTheme = {
+            '--background-color': '#FFF5E1',
+            '--text-color': '#5A3E36',
+            '--link-color': '#FF9A76',
+            '--link-hover-color': '#FF7043',
+            '--heading-color': '#FF6F61',
+            '--form-bg-color': '#FFECD9',
+            '--form-border-color': '#FFB085',
+            '--button-bg-color': '#FFA07A',
+            '--button-hover-bg-color': '#FF8C66',
+            '--table-header-bg-color': '#FFD1B3',
+            '--table-header-text-color': '#5A3E36',
+            '--blockquote-bg-color': '#FFF0E0',
+            '--blockquote-border-color': '#FFB085',
+            '--code-bg-color': '#FFECD9',
+            '--pre-bg-color': '#FFD9C0',
+            '--scrollbar-thumb-color': '#FFB085',
+            '--scrollbar-track-color': '#FFF5E1',
+            'font-family': "'Quicksand', sans-serif",
+            'h1-font-family': "'Pacifico', cursive",
+            'h2-font-family': "'Lato', sans-serif",
+            'h3-font-family': "'Lato', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const dreamcoreTheme = {
+            '--background-color': '#2B223F',
+            '--text-color': '#F3DFF3',
+            '--link-color': '#C59FFF',
+            '--link-hover-color': '#E9B3FF',
+            '--heading-color': '#E5C4FF',
+            '--form-bg-color': '#3B2D51',
+            '--form-border-color': '#BAA0D8',
+            '--button-bg-color': '#A682E1',
+            '--button-hover-bg-color': '#C4A5F3',
+            '--table-header-bg-color': '#45385C',
+            '--table-header-text-color': '#F3DFF3',
+            '--blockquote-bg-color': '#3B2D51',
+            '--blockquote-border-color': '#C59FFF',
+            '--code-bg-color': '#3B2D51',
+            '--pre-bg-color': '#4A3A66',
+            '--scrollbar-thumb-color': '#C4A5F3',
+            '--scrollbar-track-color': '#2B223F',
+            'font-family': "'Merriweather', serif",
+            'h1-font-family': "'Abril Fatface', cursive",
+            'h2-font-family': "'Playfair Display', serif",
+            'h3-font-family': "'Merriweather', serif",
+            'p-font-family': "'Open Sans', sans-serif"
+        };
+
+        const y2kTheme = {
+            '--background-color': '#FFF0FB',
+            '--text-color': '#4A004F',
+            '--link-color': '#FF66C4',
+            '--link-hover-color': '#FF8BDF',
+            '--heading-color': '#FF69B4',
+            '--form-bg-color': '#FFE0F0',
+            '--form-border-color': '#FFB3E6',
+            '--button-bg-color': '#FF66C4',
+            '--button-hover-bg-color': '#FF3EBF',
+            '--table-header-bg-color': '#FFD0E6',
+            '--table-header-text-color': '#4A004F',
+            '--blockquote-bg-color': '#FFE6F5',
+            '--blockquote-border-color': '#FF66C4',
+            '--code-bg-color': '#FFE0F0',
+            '--pre-bg-color': '#FFD6EB',
+            '--scrollbar-thumb-color': '#FFB3E6',
+            '--scrollbar-track-color': '#FFF0FB',
+            'font-family': "'Comic Sans MS', cursive, sans-serif",
+            'h1-font-family': "'Impact', Charcoal, sans-serif",
+            'h2-font-family': "'Comic Neue', cursive",
+            'h3-font-family': "'Arial Black', sans-serif",
+            'p-font-family': "'Lucida Console', monospace"
+        };
+
+        const celestialTheme = {
+            '--background-color': '#1C1A2D',
+            '--text-color': '#EAD7FA',
+            '--link-color': '#BBA7FF',
+            '--link-hover-color': '#D9C2FF',
+            '--heading-color': '#D9C2FF',
+            '--form-bg-color': '#2C2844',
+            '--form-border-color': '#A48AFF',
+            '--button-bg-color': '#9671F7',
+            '--button-hover-bg-color': '#B28DFF',
+            '--table-header-bg-color': '#2C2844',
+            '--table-header-text-color': '#EAD7FA',
+            '--blockquote-bg-color': '#2C2844',
+            '--blockquote-border-color': '#BBA7FF',
+            '--code-bg-color': '#2C2844',
+            '--pre-bg-color': '#3B3562',
+            '--scrollbar-thumb-color': '#9671F7',
+            '--scrollbar-track-color': '#1C1A2D',
+            'font-family': "'Josefin Sans', sans-serif",
+            'h1-font-family': "'Marcellus', serif",
+            'h2-font-family': "'Cormorant Garamond', serif",
+            'h3-font-family': "'Josefin Sans', sans-serif",
+            'p-font-family': "'Open Sans', sans-serif"
+        };
+
+        const starryNeonTheme = {
+            '--background-color': '#120C1C',
+            '--text-color': '#F8D6FF',
+            '--link-color': '#BB00FF',
+            '--link-hover-color': '#FF40FF',
+            '--heading-color': '#FF7CF9',
+            '--form-bg-color': '#1A1027',
+            '--form-border-color': '#BB00FF',
+            '--button-bg-color': '#D500F9',
+            '--button-hover-bg-color': '#FF40FF',
+            '--table-header-bg-color': '#1F1430',
+            '--table-header-text-color': '#F8D6FF',
+            '--blockquote-bg-color': '#1A1027',
+            '--blockquote-border-color': '#BB00FF',
+            '--code-bg-color': '#1A1027',
+            '--pre-bg-color': '#2A1A3C',
+            '--scrollbar-thumb-color': '#FF40FF',
+            '--scrollbar-track-color': '#120C1C',
+            'font-family': "'Orbitron', sans-serif",
+            'h1-font-family': "'Audiowide', cursive",
+            'h2-font-family': "'Russo One', sans-serif",
+            'h3-font-family': "'Righteous', sans-serif",
+            'p-font-family': "'Share Tech Mono', monospace"
+        };
+
+        const pixelTheme = {
+            '--background-color': '#FFF6FE',
+            '--text-color': '#2E1A47',
+            '--link-color': '#FF5EAA',
+            '--link-hover-color': '#FF85C1',
+            '--heading-color': '#F74F8D',
+            '--form-bg-color': '#FCEAFF',
+            '--form-border-color': '#DEB8FF',
+            '--button-bg-color': '#B983FF',
+            '--button-hover-bg-color': '#A26CFF',
+            '--table-header-bg-color': '#ECD7FF',
+            '--table-header-text-color': '#2E1A47',
+            '--blockquote-bg-color': '#FBE4FF',
+            '--blockquote-border-color': '#FF85C1',
+            '--code-bg-color': '#E6CCFF',
+            '--pre-bg-color': '#FCEAFF',
+            '--scrollbar-thumb-color': '#B983FF',
+            '--scrollbar-track-color': '#FFF6FE',
+            'font-family': "'Press Start 2P', cursive",
+            'h1-font-family': "'Press Start 2P', cursive",
+            'h2-font-family': "'VT323', monospace",
+            'h3-font-family': "'Pixelify Sans', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const schemes = {
+            lightScheme,
+            darkScheme,
+            retroScheme,
+            pastelScheme,
+            neonScheme,
+            oceanScheme,
+            solarizedScheme,
+            minimalScheme,
+            autumnScheme,
+            forestScheme,
+            cyberpunkScheme,
+            creamsicleTheme,
+            dreamcoreTheme,
+            y2kTheme,
+            celestialTheme,
+            starryNeonTheme,
+            pixelTheme
+        };
+
+        function applyColorScheme(scheme) {
+            for (let key in scheme) {
+                document.documentElement.style.setProperty(key, scheme[key]);
+            }
+        }
+
+        function setColorSchemeFromLocalStorage() {
+            const savedScheme = localStorage.getItem('colorScheme');
+            if (savedScheme && schemes[savedScheme]) {
+                applyColorScheme(schemes[savedScheme]);
+            } else {
+                applyColorScheme(darkScheme);
+            }
+        }
+
+        setColorSchemeFromLocalStorage();
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const navLinks = document.querySelectorAll('nav a');
+
+            navLinks.forEach(link => {
+                if (link.href === window.location.href) {
+                    link.style.fontWeight = 'bold';
+                    link.style.pointerEvents = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

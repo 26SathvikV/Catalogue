@@ -1,0 +1,510 @@
+<% var name = "Add Character"; %>
+
+<style>
+    .flower-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .flower-option {
+        position: relative;
+        cursor: pointer;
+        border: 3px solid transparent;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: border 0.3s ease;
+    }
+
+    .flower-option input[type="radio"] {
+        display: none;
+    }
+
+    .flower-option img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+
+    .flower-option.selected {
+        border-color: #ff69b4;
+        box-shadow: 0 0 10px rgba(255, 105, 180, 0.6);
+    }
+
+    .flower-option:hover img {
+        transform: scale(1.03);
+    }
+</style>
+
+<% var isEdit = typeof character !== 'undefined'; %>
+<% var name = isEdit ? "Edit Character" : "Add Character"; %>
+
+<form method="POST" action="/projects/<%= projectId %>/<%= isEdit ? 'characters/' + character._id : 'addCharacter' %>" enctype="multipart/form-data">
+    <h3>Choose a Default Flower Logo</h3><br>
+    <div class="flower-grid">
+        <% flowerOptions.forEach(function(flower, index) { 
+            const flowerPath = "/res/flowers/" + flower;
+            const selected = isEdit && character.icon === flowerPath ? "selected" : "";
+        %>
+            <label class="flower-option <%= selected %>">
+                <input 
+                  type="radio" 
+                  name="flowerIcon" 
+                  value="<%= flowerPath %>" 
+                  <%= selected ? "checked" : "" %>
+                >
+                <img src="<%= flowerPath %>" alt="Flower <%= index %>">
+            </label>
+        <% }) %>
+    </div>
+
+    <br>
+
+    <h3>Or Upload a Custom Logo<br><br> 
+        <input type="file" name="logo" accept="image/*">
+    </h3>
+
+    <br><br>
+
+    <% if (isEdit && character.icon && !character.icon.startsWith('/res/flowers')) { %>
+        <p>Current Logo: <img src="<%= character.icon %>" style="max-height: 80px;"></p>
+    <% } %>
+
+    <br><br><br>
+
+    <div style="display: grid;justify-content: center;row-gap: 0;">
+        <h4>Name</h4>
+        <input type="text" name="name" required value="<%= isEdit ? character.name : '' %>"/>
+    </div>
+
+    <br><br><br><br><br>
+
+    <h3>Nicknames</h3>
+    <table id="nicknamesTable" style="width: 100%; margin-bottom: 1em; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th><center>Nickname</center></th>
+                <th><center>Type</center></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (isEdit && character.nicknames && character.nicknames.length) {
+                character.nicknames.forEach(function(nickname, i) { %>
+                    <tr>
+                        <td><input type="text" name="nicknames[<%= i %>][nickname]" value="<%= nickname.nickname %>" required></td>
+                        <td><input type="text" name="nicknames[<%= i %>][type]" value="<%= nickname.type %>"></td>
+                        <td><button type="button" aria-label="Remove nickname" title="Remove nickname" onclick="removeNicknameRow(this)">Remove</button></td>
+                    </tr>
+            <% }) } %>
+        </tbody>
+    </table>
+
+    <button type="button" onclick="addNicknameRow()">Add Row</button>
+    
+    <br><br><br><br><br>
+
+    <h3>Pronouns</h3>
+    <table id="pronounsTable" style="width: 100%; margin-bottom: 1em; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th><center>Pronoun</center></th>
+                <th><center>Type</center></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="pronounTableRows">
+            <% if (isEdit && character.pronouns && character.pronouns.length) {
+                character.pronouns.forEach(function(pronoun, i) { %>
+                    <tr id="pronouns">
+                        <td><input type="text" name="pronouns[<%= i %>][pronoun]" value="<%= pronoun.pronoun %>" required></td>
+                        <td><input type="text" name="pronouns[<%= i %>][type]" value="<%= pronoun.type %>"></td>
+                        <td><button type="button" aria-label="Remove pronoun" title="Remove pronoun" onclick="removePronounRow(this)">Remove</button></td>
+                    </tr>
+            <% }) } %>
+        </tbody>
+    </table>
+
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 6px;">
+        <span style="font-size:12px; opacity:0.5; align-self:center;">Presets:</span>
+        <button type="button" onclick="applyPronounPreset('he')" style="font-size:12px; padding:3px 10px;">he/him</button>
+        <button type="button" onclick="applyPronounPreset('she')" style="font-size:12px; padding:3px 10px;">she/her</button>
+        <button type="button" onclick="applyPronounPreset('they')" style="font-size:12px; padding:3px 10px;">they/them</button>
+        <button type="button" onclick="applyPronounPreset('xe')" style="font-size:12px; padding:3px 10px;">xe/xem</button>
+        <button type="button" onclick="applyPronounPreset('ze')" style="font-size:12px; padding:3px 10px;">ze/zir</button>
+        <button type="button" onclick="applyPronounPreset('fae')" style="font-size:12px; padding:3px 10px;">fae/faer</button>
+        <button type="button" onclick="applyPronounPreset('it')" style="font-size:12px; padding:3px 10px;">it/its</button>
+        <button type="button" onclick="applyPronounPreset('e')" style="font-size:12px; padding:3px 10px;">e/em</button>
+        <button type="button" onclick="applyPronounPreset('ve')" style="font-size:12px; padding:3px 10px;">ve/ver</button>
+    </div>
+    <button type="button" onclick="addPronounRow()">Add Row</button>
+
+    <br><br>
+
+    <div style="display: grid;justify-content: center;row-gap: 0;">
+        <h4>Role</h4>
+        <input 
+          type="range" 
+          min="1" max="10" 
+          value="<%= isEdit ? roleMap.indexOf(character.role) : 5 %>" 
+          name="role" 
+          id="role" 
+          style="width: 25em;" 
+          oninput="updateRoleText()"
+        >
+        <p id="roleDescription" style="text-align: center;"></p>
+    </div>
+
+    <br><br>
+
+    <div style="display: grid;justify-content: center;row-gap: 0;">
+        <h4>Description</h4>
+        <textarea name="description" style="width: 50em;" rows="4"><%= isEdit ? character.description : '' %></textarea>
+    </div>
+
+    <br><br><br><br><br><br>
+
+    <h3>Traits</h3>
+    <table id="traitsTable" style="width: 100%; margin-bottom: 1em; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th><center>Key</center></th>
+                <th><center>Value</center></th>
+                <th><center>Type</center></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (isEdit && character.traits && character.traits.length) {
+                character.traits.forEach(function(trait, i) { %>
+                    <tr>
+                        <td><input type="text" name="traits[<%= i %>][key]" value="<%= trait.key %>" required></td>
+                        <td><input type="text" name="traits[<%= i %>][value]" value="<%= trait.value %>"></td>
+                        <td>
+                            <select name="traits[<%= i %>][type]">
+                                <option value="string" <%= trait.type === 'string' ? 'selected' : '' %>>String</option>
+                                <option value="number" <%= trait.type === 'number' ? 'selected' : '' %>>Number</option>
+                                <option value="boolean" <%= trait.type === 'boolean' ? 'selected' : '' %>>Boolean</option>
+                            </select>
+                        </td>
+                        <td><button type="button" aria-label="Remove trait" title="Remove trait" onclick="removeTraitRow(this)">Remove</button></td>
+                    </tr>
+            <% }) } %>
+        </tbody>
+    </table>
+
+    <button type="button" onclick="addTraitRow()">Add Row</button>
+
+    <br><br><br><br><br><br>
+
+    <h3>Voice Graph</h3>
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+        <span style="font-size:12px; opacity:0.5; align-self:center;">Presets:</span>
+        <button type="button" onclick="applyVoicePreset(7,3,4,2)" style="font-size:12px; padding:3px 10px;">Soft & Breathy</button>
+        <button type="button" onclick="applyVoicePreset(2,2,6,5)" style="font-size:12px; padding:3px 10px;">Deep & Slow</button>
+        <button type="button" onclick="applyVoicePreset(9,8,7,7)" style="font-size:12px; padding:3px 10px;">High & Fast</button>
+        <button type="button" onclick="applyVoicePreset(5,5,8,5)" style="font-size:12px; padding:3px 10px;">Monotone</button>
+        <button type="button" onclick="applyVoicePreset(4,5,7,10)" style="font-size:12px; padding:3px 10px;">Booming</button>
+        <button type="button" onclick="applyVoicePreset(5,4,5,1)" style="font-size:12px; padding:3px 10px;">Quiet</button>
+        <button type="button" onclick="applyVoicePreset(7,9,7,8)" style="font-size:12px; padding:3px 10px;">Energetic</button>
+        <button type="button" onclick="applyVoicePreset(2,4,4,7)" style="font-size:12px; padding:3px 10px;">Gruff</button>
+    </div>
+    <div style="max-width: 400px; margin: auto;">
+        <canvas id="voiceGraph"></canvas>
+    </div>
+
+    <div class="voice-inputs">
+        <% const voice = isEdit ? character.voiceGraph : {}; %>
+        <h5>Pitch<br><input type="range" min="0" max="10" value="<%= voice.pitch || 5 %>" name="voiceGraph[pitch]" oninput="updateGraph()" id="pitch"><br></h5>
+        <h5>Tempo<br><input type="range" min="0" max="10" value="<%= voice.tempo || 5 %>" name="voiceGraph[tempo]" oninput="updateGraph()" id="tempo"><br></h5>
+        <h5>Clarity<br><input type="range" min="0" max="10" value="<%= voice.clarity || 5 %>" name="voiceGraph[clarity]" oninput="updateGraph()" id="clarity"><br></h5>
+        <h5>Loudness<br><input type="range" min="0" max="10" value="<%= voice.loudness || 5 %>" name="voiceGraph[loudness]" oninput="updateGraph()" id="loudness"></h5>
+    </div>
+
+    <br><br><br><br><br>
+
+    <h3 style="margin-bottom: -1%;">Gallery 
+        <h5>Optional <br><br> 
+            <input type="file" name="gallery" accept="image/*" multiple />
+        </h5>
+    </h3>
+
+    <% if (isEdit && character.gallery && character.gallery.length) { %>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0;">
+            <% character.gallery.forEach(img => { %>
+                <img src="<%= img %>" style="height: 80px; border-radius: 5px;">
+            <% }) %>
+        </div>
+    <% } %>
+
+    <br><br><br><br><br>
+
+    <button type="submit" style="width: -webkit-fill-available;margin: 0% 15%;">
+        <%= isEdit ? 'Update Character' : 'Add Character' %>
+    </button>
+
+    <br><br><br><br><br>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let ctx = document.getElementById('voiceGraph').getContext('2d');
+
+    document.addEventListener("DOMContentLoaded", () => {
+        addDefaultPronouns();
+        const flowerOptions = document.querySelectorAll(".flower-option");
+
+        flowerOptions.forEach(option => {
+            option.addEventListener("click", () => {
+                flowerOptions.forEach(opt => opt.classList.remove("selected"));
+                option.classList.add("selected");
+            });
+        });
+    });
+
+    const voiceChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['Pitch', 'Tempo', 'Clarity', 'Loudness'],
+            datasets: [{
+                label: 'Voice Profile',
+                data: [5, 5, 5, 5],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: '#36A2EB',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    min: 0,
+                    max: 10,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+
+    function getClampedValue(id) {
+        const val = parseInt(document.getElementById(id).value);
+        return Math.max(1, val);
+    }
+
+    function updateGraph() {
+        voiceChart.data.datasets[0].data = [
+            getClampedValue('pitch'),
+            getClampedValue('tempo'),
+            getClampedValue('clarity'),
+            getClampedValue('loudness')
+        ];
+        voiceChart.update();
+    }
+
+    let nicknameIndex = 1;
+
+    function addNicknameRow() {
+        const table = document.getElementById('nicknamesTable').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+
+        const keyCell = newRow.insertCell(0);
+        keyCell.innerHTML = `<input type="text" style="width: 90%;" name="nicknames[${nicknameIndex}][nickname]" required />`;
+
+        const valueCell = newRow.insertCell(1);
+        valueCell.innerHTML = `<input type="text" style="width: 90%;" name="nicknames[${nicknameIndex}][type]" required/>`;
+
+        const deleteCell = newRow.insertCell(2);
+        deleteCell.innerHTML = `<button type="button" aria-label="Remove nickname" title="Remove nickname" onclick="removeNicknameRow(this)">Remove</button>`;
+
+        nicknameIndex++;
+    }
+
+    function removeNicknameRow(button) {
+        const row = button.parentElement.parentElement;
+        row.remove();
+    }
+
+    let pronounIndex = 1;
+
+    function addPronounRow() {
+        addPronounRowParams("Enter custom pronoun", "");
+    }
+
+    function addPronounRowParams(placeholder, type) {
+        addPronounRowDefault(placeholder, type);
+        addDefaultPronouns();
+    }
+
+    function addPronounRowDefault(placeholder, type) {
+        if (type == undefined)
+            type = "";
+        if (placeholder == undefined)
+            placeholder = "Enter custom pronoun";
+
+        const table = document.getElementById('pronounsTable').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+
+        const keyCell = newRow.insertCell(0);
+        keyCell.innerHTML = `<input type="text" style="width: 90%;" name="pronouns[${pronounIndex}][pronoun]" placeholder="${placeholder}" required />`;
+
+        const valueCell = newRow.insertCell(1);
+        valueCell.innerHTML = `<input type="text" style="width: 90%;" name="pronouns[${pronounIndex}][type]" placeholder="Enter custom type" value="${type}" required/>`;
+
+        const deleteCell = newRow.insertCell(2);
+        deleteCell.innerHTML = `<button type="button" aria-label="Remove pronoun" title="Remove pronoun" onclick="removePronounRow(this)">Remove</button>`;
+
+        pronounIndex++;
+    }
+
+    function removePronounRow(button) {
+        const row = button.parentElement.parentElement;
+        row.remove();
+    }
+
+    let traitIndex = 1;
+
+    function addTraitRow() {
+        const table = document.getElementById('traitsTable').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+
+        const keyCell = newRow.insertCell(0);
+        keyCell.innerHTML = `<input type="text" style="width: 90%;" name="traits[${traitIndex}][key]" required />`;
+
+        const valueCell = newRow.insertCell(1);
+        valueCell.innerHTML = `<input type="text" style="width: 90%;" name="traits[${traitIndex}][value]" />`;
+
+        const typeCell = newRow.insertCell(2);
+        typeCell.innerHTML = ` 
+            <select style="width: 90%;" name="traits[${traitIndex}][type]">
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+            </select>`;
+
+        const deleteCell = newRow.insertCell(3);
+        deleteCell.innerHTML = `<button type="button" aria-label="Remove trait" title="Remove trait" onclick="removeTraitRow(this)">Remove</button>`;
+
+        traitIndex++;
+    }
+
+    function removeTraitRow(button) {
+        const row = button.parentElement.parentElement;
+        row.remove();
+    }
+
+    function updateRoleText() {
+        const roleValue = parseInt(document.getElementById('role').value);
+        const roleText = document.getElementById('roleDescription');
+        
+        let role = '';
+        switch (roleValue) {
+            case 0:
+                role = 'Mention';
+                break;
+            case 1:
+                role = 'Cameo';
+                break;
+            case 2:
+                role = 'Background Character';
+                break;
+            case 3:
+                role = 'Minor Character';
+                break;
+            case 4:
+                role = 'Supporting Character';
+                break;
+            case 5:
+                role = 'Side Character';
+                break;
+            case 6:
+                role = 'Narrative Catalyst';
+                break;
+            case 7:
+                role = 'Foil';
+                break;
+            case 8:
+                role = 'Antagonist';
+                break;
+            case 9:
+                role = 'Deuteragonist';
+                break;
+            case 10:
+                role = 'Protagonist';
+                break;
+            default:
+                role = 'God';
+                break;
+        }
+
+        roleText.textContent = role;
+    }
+
+    function addDefaultPronouns() {
+        const pronounOptions = document.getElementById("pronounTableRows").children;
+        let types = ["Subjective", "Objective", "Possessive Determiner", "Possessive", "Reflexive"]
+        let typePronouns = ["he, she, they, ze, etc.", "him, her, them, zir, etc.", "his, her, their, zir, etc.", "his, hers, theirs, zirs, etc.", "himself, herself, themselves, zirself, etc."]
+
+        for (let index = 0; index < pronounOptions.length; index++)
+        {
+            let options = pronounOptions[index].children;
+            let typeIndex = types.indexOf(options[1].children[0].value)
+
+            if (typeIndex != -1)
+            {
+                types = removeIndex(types, typeIndex);
+                typePronouns = removeIndex(typePronouns, typeIndex);
+            }
+        }
+
+        for (let index = 0; index < types.length; index++)
+        {
+            addPronounRowDefault(typePronouns[index],types[index]);
+        }
+    }
+
+    function removeIndex(arr, index) {
+        return arr.filter((_, i) => i !== index);
+    }
+
+    // Pronoun presets: [subjective, objective, possessive-det, possessive, reflexive]
+    const pronounPresets = {
+        he:   ['he','him','his','his','himself'],
+        she:  ['she','her','her','hers','herself'],
+        they: ['they','them','their','theirs','themselves'],
+        xe:   ['xe','xem','xyr','xyrs','xemself'],
+        ze:   ['ze','zir','zir','zirs','zirself'],
+        fae:  ['fae','faer','faer','faers','faerself'],
+        it:   ['it','it','its','its','itself'],
+        e:    ['e','em','eir','eirs','emself'],
+        ve:   ['ve','ver','vis','vis','verself']
+    };
+    const pronounTypes = ['Subjective','Objective','Possessive Determiner','Possessive','Reflexive'];
+
+    function applyPronounPreset(key) {
+        const vals = pronounPresets[key];
+        if (!vals) return;
+        const tbody = document.getElementById('pronounsTable').getElementsByTagName('tbody')[0];
+        tbody.innerHTML = '';
+        pronounIndex = 0;
+        vals.forEach(function(val, i) {
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="text" style="width:90%;" name="pronouns[${pronounIndex}][pronoun]" value="${val}" required></td>` +
+                `<td><input type="text" style="width:90%;" name="pronouns[${pronounIndex}][type]" value="${pronounTypes[i]}" required></td>` +
+                `<td><button type="button" aria-label="Remove pronoun" title="Remove pronoun" onclick="removePronounRow(this)">Remove</button></td>`;
+            pronounIndex++;
+        });
+    }
+
+    function applyVoicePreset(pitch, tempo, clarity, loudness) {
+        document.getElementById('pitch').value    = pitch;
+        document.getElementById('tempo').value    = tempo;
+        document.getElementById('clarity').value  = clarity;
+        document.getElementById('loudness').value = loudness;
+        updateGraph();
+    }
+
+    updateGraph();
+    updateRoleText();
+</script>

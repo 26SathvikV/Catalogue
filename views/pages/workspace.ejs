@@ -1,0 +1,78 @@
+<style>
+    .ws-wrap { max-width: 780px; margin: 0 auto; }
+    .ws-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .ws-header h2 { margin: 0; }
+    .ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .ws-card { background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 10px; padding: 18px; cursor: pointer; transition: border-color 0.15s; text-decoration: none; color: inherit; display: block; }
+    .ws-card:hover { border-color: var(--link-color); }
+    .ws-card h3 { margin: 0 0 6px; font-size: 16px; }
+    .ws-card-meta { font-size: 12px; opacity: 0.5; }
+    .ws-empty { text-align: center; opacity: 0.4; margin-top: 60px; font-size: 14px; }
+    .create-ws-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+    .create-ws-modal.open { display: flex; }
+    .create-ws-box { background: var(--background-color); border: 1px solid var(--form-border-color); border-radius: 12px; padding: 28px; width: 100%; max-width: 420px; }
+    .create-ws-box h3 { margin: 0 0 18px; }
+    .create-ws-box input, .create-ws-box textarea { width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 8px 10px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 6px; color: inherit; font-family: inherit; font-size: 14px; }
+    .create-ws-box textarea { height: 72px; resize: vertical; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+</style>
+
+<div class="ws-wrap">
+    <div class="ws-header">
+        <h2>Team Workspaces</h2>
+        <button type="button" onclick="openCreateModal()" style="padding:7px 16px;font-size:13px;">+ New Workspace</button>
+    </div>
+
+    <% if (workspaces.length === 0) { %>
+        <div class="ws-empty">
+            <p style="font-size:32px;margin-bottom:10px;"><ion-icon name="business-outline" aria-hidden="true"></ion-icon></p>
+            <p>No workspaces yet. Create one to collaborate with your team.</p>
+        </div>
+    <% } else { %>
+        <div class="ws-grid">
+            <% workspaces.forEach(function(ws) { %>
+                <a class="ws-card" href="/workspace/<%= ws._id %>">
+                    <h3><%= ws.name %></h3>
+                    <% if (ws.description) { %><p style="font-size:13px;opacity:0.65;margin:0 0 8px;"><%= ws.description %></p><% } %>
+                    <div class="ws-card-meta">
+                        <%= ws.members.length %> member<%= ws.members.length !== 1 ? 's' : '' %> &bull;
+                        <%= ws.projects.length %> project<%= ws.projects.length !== 1 ? 's' : '' %>
+                    </div>
+                </a>
+            <% }) %>
+        </div>
+    <% } %>
+</div>
+
+<div class="create-ws-modal" id="createWsModal" onclick="if(event.target===this)closeCreateModal()">
+    <div class="create-ws-box">
+        <h3>New Workspace</h3>
+        <input type="text" id="wsName" placeholder="Workspace name" maxlength="80" />
+        <textarea id="wsDesc" placeholder="Description (optional)"></textarea>
+        <div class="modal-btns">
+            <button type="button" onclick="closeCreateModal()" style="opacity:0.6;">Cancel</button>
+            <button type="button" onclick="submitCreateWs()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openCreateModal() { document.getElementById('createWsModal').classList.add('open'); document.getElementById('wsName').focus(); }
+function closeCreateModal() { document.getElementById('createWsModal').classList.remove('open'); }
+
+function submitCreateWs() {
+    var name = document.getElementById('wsName').value.trim();
+    var desc = document.getElementById('wsDesc').value.trim();
+    if (!name) { document.getElementById('wsName').focus(); return; }
+    fetch('/workspace/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, description: desc })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) window.location.href = '/workspace/' + d.workspace._id;
+        else alert(d.error || 'Failed to create workspace');
+    }).catch(function() { alert('Error creating workspace'); });
+}
+
+document.getElementById('wsName').addEventListener('keydown', function(e) { if (e.key === 'Enter') submitCreateWs(); });
+</script>

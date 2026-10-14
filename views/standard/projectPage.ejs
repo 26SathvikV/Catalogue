@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalogue - <%- projectName %> (<%- name %>)</title>
+    <link rel="icon" id="dynFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .color-scheme-dropdown {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .site-switcher-btn-wrap {
+            margin: 20px 0;
+            text-align: center;
+            width: 10%;
+            position: absolute;
+            left: 1%;
+        }
+
+        .color-scheme-dropdown select {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        h1, h2, h3, p {
+            margin: 0.5em 0;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* ── App switcher popup ── */
+        #siteSwitcherBtn {
+            padding: 6px 12px; font-size: 18px;
+            letter-spacing: 2px; cursor: pointer;
+            background: transparent;
+            border: 1px solid var(--form-border-color);
+            color: var(--text-color); border-radius: 6px;
+            width: 100%;
+        }
+        #siteSwitcherBtn:hover { background: var(--form-bg-color); }
+        .sites-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; margin-bottom: 12px;
+        }
+        .site-item {
+            text-decoration: none; text-align: center;
+            color: var(--text-color); padding: 8px 4px;
+            border-radius: 8px; transition: background 0.15s;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .site-item:hover { background: var(--code-bg-color); }
+        .site-label { font-size: 0.68rem; }
+        .sites-divider {
+            border: none; border-top: 1px solid var(--form-border-color);
+            margin: 8px 0;
+        }
+        .sites-logout { font-size: 0.82rem; color: var(--link-color); text-decoration: none; display: block; padding: 2px 0; }
+        .sites-logout:hover { text-decoration: underline; }
+
+        /* ── Responsive ── */
+        @media (max-width: 700px) {
+            .site-switcher-btn-wrap { width: 18%; left: 1%; }
+            .color-scheme-dropdown select { padding: 6px 8px; font-size: 13px; }
+            main { padding: 20px 16px !important; }
+            nav center { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+            nav a { font-size: 12px; }
+            #siteSwitcher { left: 0; right: 0; width: auto; margin: 0 8px; position: fixed; top: 66px; }
+        }
+
+        /* Toast notifications */
+        #toastContainer { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast { background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:8px; padding:10px 16px; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,0.2); opacity:0; transform:translateY(12px); transition:opacity 0.25s, transform 0.25s; pointer-events:auto; max-width:300px; display:flex; align-items:center; gap:8px; }
+        .toast.show { opacity:1; transform:translateY(0); }
+        .toast.success { border-left:3px solid #27ae60; }
+        .toast.error   { border-left:3px solid #e74c3c; }
+        .toast.info    { border-left:3px solid var(--link-color); }
+        /* Notification bell */
+        .notif-bell-wrap { position:relative; display:inline-flex; align-items:center; }
+        .notif-badge { position:absolute; top:-6px; right:-8px; background:#e74c3c; color:#fff; border-radius:50%; font-size:10px; font-weight:700; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; display:none; }
+    </style>
+</head>
+<body>
+    <div class="header1">
+        <div class="site-switcher-btn-wrap">
+            <button id="siteSwitcherBtn" onclick="toggleSiteSwitcher(event)" title="App Switcher">&#9776;</button>
+        </div>
+
+        <div style="align-content: center; width: 100%;">
+            <div style="text-align:center; font-size:11px; opacity:0.4; margin-bottom:2px; letter-spacing:0.04em;">
+                <a href="/projects" style="color:inherit; text-decoration:none; opacity:0.7;">Projects</a>
+                <span style="margin:0 4px;">›</span>
+                <span><%- projectName %></span>
+            </div>
+            <h1 style="text-align: center; width: 100%;"><%- projectName %></h1>
+            <h3 style="text-align: center; width: 100%;"><%- name %></h3>
+        </div>
+
+        <div class="color-scheme-dropdown">
+            <select id="colorSchemeSelect">
+                <option value="darkScheme">Dark</option>
+                <option value="lightScheme">Light</option>
+                <option value="retroScheme">Retro</option>
+                <option value="pastelScheme">Pastel</option>
+                <option value="neonScheme">Neon</option>
+                <option value="oceanScheme">Ocean</option>
+                <option value="solarizedScheme">Solarized</option>
+                <option value="minimalScheme">Minimal</option>
+                <option value="autumnScheme">Autumn</option>
+                <option value="forestScheme">Forest</option>
+                <option value="cyberpunkScheme">Cyberpunk</option>
+                <option value="creamsicleTheme">Creamsicle</option>
+                <option value="dreamcoreTheme">Dreamcore</option>
+                <option value="y2kTheme">Y2K</option>
+                <option value="celestialTheme">Celestial</option>
+                <option value="starryNeonTheme">Starry Neon</option>
+                <option value="pixelTheme">Pixel</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="header2">
+        <nav>
+            <center>
+                <a href="/projects/<%- projectId %>">Details</a>
+                <a href="/projects/<%- projectId %>/taskManager">Task Manager</a>
+                <a href="/projects/<%- projectId %>/characters">Characters</a>
+                <a href="/projects/<%- projectId %>/timeline">Timeline</a>
+                <a href="/projects/<%- projectId %>/cards">Cards</a>
+                <a href="/projects/<%- projectId %>/docs">Docs</a>
+                <a href="/projects/<%- projectId %>/projects">Attached Projects</a>
+                <a href="/projects/<%- projectId %>/settings">Settings</a>
+                <a href="/projects/">Back to Home</a>
+                <span class="notif-bell-wrap">
+                    <a href="/notifications" id="notifBellLink" title="Inbox" aria-label="Inbox"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon></a>
+                    <span class="notif-badge" id="notifBadge"></span>
+                </span>
+            </center>
+        </nav>
+    </div>
+
+    <!-- Site switcher popup -->
+    <div id="siteSwitcher" role="dialog" aria-label="App Switcher" style="display:none; position:absolute; top:66px; left:6px; min-width:240px; background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:10px; padding:16px; box-shadow:0 8px 32px rgba(0,0,0,0.25); z-index:600;">
+        <div class="sites-grid" id="siteSwitcherGrid">
+            <div style="color:var(--link-color);font-size:0.8rem;grid-column:1/-1">Loading…</div>
+        </div>
+        <hr class="sites-divider">
+        <a href="/logout" class="sites-logout">Logout</a>
+    </div>
+
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <script>
+    (function(){
+        let loaded = false;
+        window.toggleSiteSwitcher = async function(e) {
+            e.stopPropagation();
+            const sw = document.getElementById('siteSwitcher');
+            const open = sw.style.display !== 'none';
+            sw.style.display = open ? 'none' : 'block';
+            if (!open && !loaded) {
+                loaded = true;
+                try {
+                    const sites = await fetch('/api/websites').then(r => r.json());
+                    const grid = document.getElementById('siteSwitcherGrid');
+                    if (!sites.length) {
+                        grid.innerHTML = `<div style="color:var(--link-color);font-size:0.8rem;grid-column:1/-1">No apps yet.</div>`;
+                        return;
+                    }
+                    grid.innerHTML = sites.map(site => {
+                        const href = /^https?:\/\//i.test(site.link) ? site.link : 'https://' + site.link;
+                        return `<a href="${href}" class="site-item">
+                            <ion-icon name="${site.icon || 'globe-outline'}" style="font-size:28px;color:${site.color || '#888'}"></ion-icon>
+                            <span class="site-label">${site.site_name}</span>
+                        </a>`;
+                    }).join('');
+                } catch {
+                    document.getElementById('siteSwitcherGrid').innerHTML =
+                        `<div style="color:var(--link-color);font-size:0.8rem;grid-column:1/-1">Failed to load.</div>`;
+                }
+            }
+        };
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#siteSwitcher') && !e.target.closest('#siteSwitcherBtn'))
+                document.getElementById('siteSwitcher').style.display = 'none';
+        });
+    })();
+
+    // Set favicon from database icon + color
+    fetch('/api/self').then(function(r){ return r.json(); }).then(function(s) {
+        if (!s.icon) return;
+        fetch('https://unpkg.com/ionicons@7.1.0/dist/ionicons/svg/' + s.icon + '.svg')
+            .then(function(r){ return r.text(); })
+            .then(function(svg) {
+                var col = s.color || '#888888';
+                var colored = svg.replace(/<svg /, '<svg fill="' + col + '" ');
+                var uri = 'data:image/svg+xml;base64,' + btoa(colored);
+                var link = document.getElementById('dynFavicon');
+                if (link) link.href = uri;
+            }).catch(function(){});
+    }).catch(function(){});
+
+    // Notification badge
+    fetch('/api/notifications/unread-count').then(function(r){ return r.json(); }).then(function(d) {
+        var badge = document.getElementById('notifBadge');
+        if (!badge || !d.count) return;
+        badge.style.display = 'flex';
+        badge.textContent = d.count > 99 ? '99+' : d.count;
+    }).catch(function(){});
+    </script>
+
+    <main style="padding: 35px 80px; height: 75%;">
+        <%- body %>
+    </main>
+
+    <script>
+        const lightScheme = {
+            '--background-color': '#FFF0F5',
+            '--text-color': '#4B2C3D',
+            '--link-color': '#FF66B3',
+            '--link-hover-color': '#FF3399',
+            '--heading-color': '#FF80CC',
+            '--form-bg-color': '#FFFFFF',
+            '--form-border-color': '#FFD6E8',
+            '--button-bg-color': '#FF66B3',
+            '--button-hover-bg-color': '#FF3399',
+            '--table-header-bg-color': '#FFE6F0',
+            '--table-header-text-color': '#FF66B3',
+            '--blockquote-bg-color': '#FFF5FA',
+            '--blockquote-border-color': '#FF80CC',
+            '--code-bg-color': '#FFE9F2',
+            '--pre-bg-color': '#FFF5FA',
+            '--scrollbar-thumb-color': '#FF99CC',
+            '--scrollbar-track-color': '#FFE6F0',
+            'font-family': "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            'h1-font-family': "'Lobster', cursive",
+            'h2-font-family': "'Roboto', sans-serif",
+            'h3-font-family': "'Open Sans', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const darkScheme = {
+            '--background-color': '#2B1B2E',
+            '--text-color': '#FFD6E8',
+            '--link-color': '#FF80CC',
+            '--link-hover-color': '#FF66B3',
+            '--heading-color': '#FF99CC',
+            '--form-bg-color': '#3D2B3D',
+            '--form-border-color': '#FF80CC',
+            '--button-bg-color': '#FF66B3',
+            '--button-hover-bg-color': '#FF3399',
+            '--table-header-bg-color': '#3B2B3F',
+            '--table-header-text-color': '#FF80CC',
+            '--blockquote-bg-color': '#3D2B3D',
+            '--blockquote-border-color': '#FF80CC',
+            '--code-bg-color': '#4A354A',
+            '--pre-bg-color': '#3B2B3F',
+            '--scrollbar-thumb-color': '#FF80CC',
+            '--scrollbar-track-color': '#2B1B2E',
+            'font-family': "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            'h1-font-family': "'Courier New', Courier, monospace",
+            'h2-font-family': "'Arial', sans-serif",
+            'h3-font-family': "'Times New Roman', Times, serif",
+            'p-font-family': "'Verdana', sans-serif"
+        };
+
+        const retroScheme = {
+            '--background-color': '#FDF6F0',
+            '--text-color': '#3E2A28',
+            '--link-color': '#FF69B4',
+            '--link-hover-color': '#F24CA0',
+            '--heading-color': '#EF4E7B',
+            '--form-bg-color': '#FAF0E6',
+            '--form-border-color': '#CFA6A0',
+            '--button-bg-color': '#EF4E7B',
+            '--button-hover-bg-color': '#D54074',
+            '--table-header-bg-color': '#EAD7C8',
+            '--table-header-text-color': '#3E2A28',
+            '--blockquote-bg-color': '#FBE8DC',
+            '--blockquote-border-color': '#EF4E7B',
+            '--code-bg-color': '#FFF6F2',
+            '--pre-bg-color': '#F8EAE0',
+            '--scrollbar-thumb-color': '#D18B99',
+            '--scrollbar-track-color': '#FAF0E6',
+            'font-family': "'Courier New', Courier, monospace",
+            'h1-font-family': "'Raleway', sans-serif",
+            'h2-font-family': "'Playfair Display', serif",
+            'h3-font-family': "'Raleway', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const pastelScheme = {
+            '--background-color': '#F7E6F7',
+            '--text-color': '#5C415D',
+            '--link-color': '#E07CB4',
+            '--link-hover-color': '#C4579A',
+            '--heading-color': '#B45FA0',
+            '--form-bg-color': '#FFF0FA',
+            '--form-border-color': '#E8C9D8',
+            '--button-bg-color': '#D88FBF',
+            '--button-hover-bg-color': '#C46DAA',
+            '--table-header-bg-color': '#F2D2E2',
+            '--table-header-text-color': '#5C415D',
+            '--blockquote-bg-color': '#FBE8F3',
+            '--blockquote-border-color': '#B45FA0',
+            '--code-bg-color': '#FAEDF6',
+            '--pre-bg-color': '#F3E0F2',
+            '--scrollbar-thumb-color': '#D8A0C8',
+            '--scrollbar-track-color': '#F7E6F7',
+            'font-family': "'Lora', serif",
+            'h1-font-family': "'Quicksand', sans-serif",
+            'h2-font-family': "'Lora', serif",
+            'h3-font-family': "'Lora', serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const neonScheme = {
+            '--background-color': '#0D001A',
+            '--text-color': '#FAD7F2',
+            '--link-color': '#FF38A6',
+            '--link-hover-color': '#FF0EDC',
+            '--heading-color': '#F93CF3',
+            '--form-bg-color': '#190033',
+            '--form-border-color': '#FF38A6',
+            '--button-bg-color': '#FF38A6',
+            '--button-hover-bg-color': '#FF0EDC',
+            '--table-header-bg-color': '#220044',
+            '--table-header-text-color': '#FF66B3',
+            '--blockquote-bg-color': '#190033',
+            '--blockquote-border-color': '#F93CF3',
+            '--code-bg-color': '#2A004D',
+            '--pre-bg-color': '#190033',
+            '--scrollbar-thumb-color': '#F93CF3',
+            '--scrollbar-track-color': '#0D001A',
+            'font-family': "'Orbitron', sans-serif",
+            'h1-font-family': "'Audiowide', cursive",
+            'h2-font-family': "'Russo One', sans-serif",
+            'h3-font-family': "'Righteous', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const oceanScheme = {
+            '--background-color': '#EDE6F9',
+            '--text-color': '#453755',
+            '--link-color': '#9C7DD1',
+            '--link-hover-color': '#B98CF2',
+            '--heading-color': '#A88DD9',
+            '--form-bg-color': '#F7F4FD',
+            '--form-border-color': '#D5C7EB',
+            '--button-bg-color': '#B98CF2',
+            '--button-hover-bg-color': '#A276D8',
+            '--table-header-bg-color': '#DDD1F2',
+            '--table-header-text-color': '#453755',
+            '--blockquote-bg-color': '#F3EDFB',
+            '--blockquote-border-color': '#BBA6E0',
+            '--code-bg-color': '#F7F0FB',
+            '--pre-bg-color': '#EEE6F8',
+            '--scrollbar-thumb-color': '#C6B0E9',
+            '--scrollbar-track-color': '#F0EBF9',
+            'font-family': "'Segoe UI', sans-serif",
+            'h1-font-family': "'Lobster', cursive",
+            'h2-font-family': "'Open Sans', sans-serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const solarizedScheme = {
+            '--background-color': '#002B36',
+            '--text-color': '#FADCE8',
+            '--link-color': '#F471B5',
+            '--link-hover-color': '#FF8FD6',
+            '--heading-color': '#FF8FD6', 
+            '--form-bg-color': '#073642',
+            '--form-border-color': '#586E75',
+            '--button-bg-color': '#D33682',
+            '--button-hover-bg-color': '#F471B5',
+            '--table-header-bg-color': '#073642',
+            '--table-header-text-color': '#FADCE8',
+            '--blockquote-bg-color': '#073642',
+            '--blockquote-border-color': '#D33682',
+            '--code-bg-color': '#002B36',
+            '--pre-bg-color': '#073642',
+            '--scrollbar-thumb-color': '#D33682',
+            '--scrollbar-track-color': '#002B36',
+            'font-family': "'Source Code Pro', monospace",
+            'h1-font-family': "'IBM Plex Mono', monospace",
+            'h2-font-family': "'IBM Plex Sans', sans-serif",
+            'h3-font-family': "'IBM Plex Mono', monospace",
+            'p-font-family': "'Source Sans Pro', sans-serif"
+        };
+
+        const minimalScheme = {
+            '--background-color': '#FFFFFF',
+            '--text-color': '#2A2A2A',
+            '--link-color': '#E070A2',
+            '--link-hover-color': '#D05488',
+            '--heading-color': '#3B3B3B',
+            '--form-bg-color': '#FAFAFA',
+            '--form-border-color': '#EAEAEA',
+            '--button-bg-color': '#62484e',
+            '--button-hover-bg-color': '#89656d',
+            '--table-header-bg-color': '#F2F2F2',
+            '--table-header-text-color': '#3B3B3B',
+            '--blockquote-bg-color': '#F9F9F9',
+            '--blockquote-border-color': '#E070A2',
+            '--code-bg-color': '#F4F4F4',
+            '--pre-bg-color': '#F9F9F9',
+            '--scrollbar-thumb-color': '#D8D8D8',
+            '--scrollbar-track-color': '#F0F0F0',
+            'font-family': "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            'h1-font-family': "'Roboto', sans-serif",
+            'h2-font-family': "'Roboto', sans-serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const autumnScheme = {
+            '--background-color': '#3F2A28',
+            '--text-color': '#FFE6F0',
+            '--link-color': '#C47D95',
+            '--link-hover-color': '#E08AA9',
+            '--heading-color': '#D99FAF',
+            '--form-bg-color': '#5A3A37',
+            '--form-border-color': '#D6A5B4',
+            '--button-bg-color': '#A4556C',
+            '--button-hover-bg-color': '#C36C88',
+            '--table-header-bg-color': '#4E3634',
+            '--table-header-text-color': '#FFD9E0',
+            '--blockquote-bg-color': '#5A3A37',
+            '--blockquote-border-color': '#B57B91',
+            '--code-bg-color': '#3F2A28',
+            '--pre-bg-color': '#4E3634',
+            '--scrollbar-thumb-color': '#A2677D',
+            '--scrollbar-track-color': '#3F2A28',
+            'font-family': "'Georgia', serif",
+            'h1-font-family': "'Playfair Display', serif",
+            'h2-font-family': "'Georgia', serif",
+            'h3-font-family': "'Georgia', serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const forestScheme = {
+            '--background-color': '#2D1F24',
+            '--text-color': '#F2E4EA',
+            '--link-color': '#C87EA5',
+            '--link-hover-color': '#E697C0',
+            '--heading-color': '#D38CA9',
+            '--form-bg-color': '#39282D',
+            '--form-border-color': '#D6A5B4',
+            '--button-bg-color': '#8F4F6F',
+            '--button-hover-bg-color': '#A66287',
+            '--table-header-bg-color': '#47333A',
+            '--table-header-text-color': '#F2E4EA',
+            '--blockquote-bg-color': '#39282D',
+            '--blockquote-border-color': '#B57B91',
+            '--code-bg-color': '#2D1F24',
+            '--pre-bg-color': '#3A2A2F',
+            '--scrollbar-thumb-color': '#A2677D',
+            '--scrollbar-track-color': '#2D1F24',
+            'font-family': "'Georgia', serif",
+            'h1-font-family': "'Merriweather', serif",
+            'h2-font-family': "'Roboto Slab', serif",
+            'h3-font-family': "'Roboto', sans-serif",
+            'p-font-family': "'Arial', sans-serif"
+        };
+
+        const cyberpunkScheme = {
+            '--background-color': '#0C021D',
+            '--text-color': '#FFD6F2',
+            '--link-color': '#FF00B8',
+            '--link-hover-color': '#00FFF7',
+            '--heading-color': '#FA2AFF',
+            '--form-bg-color': '#1A0033',
+            '--form-border-color': '#FF00B8',
+            '--button-bg-color': '#FF00B8',
+            '--button-hover-bg-color': '#00FFF7',
+            '--table-header-bg-color': '#2B0059',
+            '--table-header-text-color': '#FF66F2',
+            '--blockquote-bg-color': '#1A0033',
+            '--blockquote-border-color': '#FA2AFF',
+            '--code-bg-color': '#2B0059',
+            '--pre-bg-color': '#1A0033',
+            '--scrollbar-thumb-color': '#FA2AFF',
+            '--scrollbar-track-color': '#0C021D',
+            'font-family': "'Share Tech Mono', monospace",
+            'h1-font-family': "'Orbitron', sans-serif",
+            'h2-font-family': "'VT323', monospace",
+            'h3-font-family': "'Russo One', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const creamsicleTheme = {
+            '--background-color': '#FFF5E1',
+            '--text-color': '#5A3E36',
+            '--link-color': '#FF9A76',
+            '--link-hover-color': '#FF7043',
+            '--heading-color': '#FF6F61',
+            '--form-bg-color': '#FFECD9',
+            '--form-border-color': '#FFB085',
+            '--button-bg-color': '#FFA07A',
+            '--button-hover-bg-color': '#FF8C66',
+            '--table-header-bg-color': '#FFD1B3',
+            '--table-header-text-color': '#5A3E36',
+            '--blockquote-bg-color': '#FFF0E0',
+            '--blockquote-border-color': '#FFB085',
+            '--code-bg-color': '#FFECD9',
+            '--pre-bg-color': '#FFD9C0',
+            '--scrollbar-thumb-color': '#FFB085',
+            '--scrollbar-track-color': '#FFF5E1',
+            'font-family': "'Quicksand', sans-serif",
+            'h1-font-family': "'Pacifico', cursive",
+            'h2-font-family': "'Lato', sans-serif",
+            'h3-font-family': "'Lato', sans-serif",
+            'p-font-family': "'Georgia', serif"
+        };
+
+        const dreamcoreTheme = {
+            '--background-color': '#2B223F',
+            '--text-color': '#F3DFF3',
+            '--link-color': '#C59FFF',
+            '--link-hover-color': '#E9B3FF',
+            '--heading-color': '#E5C4FF',
+            '--form-bg-color': '#3B2D51',
+            '--form-border-color': '#BAA0D8',
+            '--button-bg-color': '#A682E1',
+            '--button-hover-bg-color': '#C4A5F3',
+            '--table-header-bg-color': '#45385C',
+            '--table-header-text-color': '#F3DFF3',
+            '--blockquote-bg-color': '#3B2D51',
+            '--blockquote-border-color': '#C59FFF',
+            '--code-bg-color': '#3B2D51',
+            '--pre-bg-color': '#4A3A66',
+            '--scrollbar-thumb-color': '#C4A5F3',
+            '--scrollbar-track-color': '#2B223F',
+            'font-family': "'Merriweather', serif",
+            'h1-font-family': "'Abril Fatface', cursive",
+            'h2-font-family': "'Playfair Display', serif",
+            'h3-font-family': "'Merriweather', serif",
+            'p-font-family': "'Open Sans', sans-serif"
+        };
+
+        const y2kTheme = {
+            '--background-color': '#FFF0FB',
+            '--text-color': '#4A004F',
+            '--link-color': '#FF66C4',
+            '--link-hover-color': '#FF8BDF',
+            '--heading-color': '#FF69B4',
+            '--form-bg-color': '#FFE0F0',
+            '--form-border-color': '#FFB3E6',
+            '--button-bg-color': '#FF66C4',
+            '--button-hover-bg-color': '#FF3EBF',
+            '--table-header-bg-color': '#FFD0E6',
+            '--table-header-text-color': '#4A004F',
+            '--blockquote-bg-color': '#FFE6F5',
+            '--blockquote-border-color': '#FF66C4',
+            '--code-bg-color': '#FFE0F0',
+            '--pre-bg-color': '#FFD6EB',
+            '--scrollbar-thumb-color': '#FFB3E6',
+            '--scrollbar-track-color': '#FFF0FB',
+            'font-family': "'Comic Sans MS', cursive, sans-serif",
+            'h1-font-family': "'Impact', Charcoal, sans-serif",
+            'h2-font-family': "'Comic Neue', cursive",
+            'h3-font-family': "'Arial Black', sans-serif",
+            'p-font-family': "'Lucida Console', monospace"
+        };
+
+        const celestialTheme = {
+            '--background-color': '#1C1A2D',
+            '--text-color': '#EAD7FA',
+            '--link-color': '#BBA7FF',
+            '--link-hover-color': '#D9C2FF',
+            '--heading-color': '#D9C2FF',
+            '--form-bg-color': '#2C2844',
+            '--form-border-color': '#A48AFF',
+            '--button-bg-color': '#9671F7',
+            '--button-hover-bg-color': '#B28DFF',
+            '--table-header-bg-color': '#2C2844',
+            '--table-header-text-color': '#EAD7FA',
+            '--blockquote-bg-color': '#2C2844',
+            '--blockquote-border-color': '#BBA7FF',
+            '--code-bg-color': '#2C2844',
+            '--pre-bg-color': '#3B3562',
+            '--scrollbar-thumb-color': '#9671F7',
+            '--scrollbar-track-color': '#1C1A2D',
+            'font-family': "'Josefin Sans', sans-serif",
+            'h1-font-family': "'Marcellus', serif",
+            'h2-font-family': "'Cormorant Garamond', serif",
+            'h3-font-family': "'Josefin Sans', sans-serif",
+            'p-font-family': "'Open Sans', sans-serif"
+        };
+
+        const starryNeonTheme = {
+            '--background-color': '#120C1C',
+            '--text-color': '#F8D6FF',
+            '--link-color': '#BB00FF',
+            '--link-hover-color': '#FF40FF',
+            '--heading-color': '#FF7CF9',
+            '--form-bg-color': '#1A1027',
+            '--form-border-color': '#BB00FF',
+            '--button-bg-color': '#D500F9',
+            '--button-hover-bg-color': '#FF40FF',
+            '--table-header-bg-color': '#1F1430',
+            '--table-header-text-color': '#F8D6FF',
+            '--blockquote-bg-color': '#1A1027',
+            '--blockquote-border-color': '#BB00FF',
+            '--code-bg-color': '#1A1027',
+            '--pre-bg-color': '#2A1A3C',
+            '--scrollbar-thumb-color': '#FF40FF',
+            '--scrollbar-track-color': '#120C1C',
+            'font-family': "'Orbitron', sans-serif",
+            'h1-font-family': "'Audiowide', cursive",
+            'h2-font-family': "'Russo One', sans-serif",
+            'h3-font-family': "'Righteous', sans-serif",
+            'p-font-family': "'Share Tech Mono', monospace"
+        };
+
+        const pixelTheme = {
+            '--background-color': '#FFF6FE',
+            '--text-color': '#2E1A47',
+            '--link-color': '#FF5EAA',
+            '--link-hover-color': '#FF85C1',
+            '--heading-color': '#F74F8D',
+            '--form-bg-color': '#FCEAFF',
+            '--form-border-color': '#DEB8FF',
+            '--button-bg-color': '#B983FF',
+            '--button-hover-bg-color': '#A26CFF',
+            '--table-header-bg-color': '#ECD7FF',
+            '--table-header-text-color': '#2E1A47',
+            '--blockquote-bg-color': '#FBE4FF',
+            '--blockquote-border-color': '#FF85C1',
+            '--code-bg-color': '#E6CCFF',
+            '--pre-bg-color': '#FCEAFF',
+            '--scrollbar-thumb-color': '#B983FF',
+            '--scrollbar-track-color': '#FFF6FE',
+            'font-family': "'Press Start 2P', cursive",
+            'h1-font-family': "'Press Start 2P', cursive",
+            'h2-font-family': "'VT323', monospace",
+            'h3-font-family': "'Pixelify Sans', sans-serif",
+            'p-font-family': "'Courier New', Courier, monospace"
+        };
+
+        const schemes = {
+            lightScheme,
+            darkScheme,
+            retroScheme,
+            pastelScheme,
+            neonScheme,
+            oceanScheme,
+            solarizedScheme,
+            minimalScheme,
+            autumnScheme,
+            forestScheme,
+            cyberpunkScheme,
+            creamsicleTheme,
+            dreamcoreTheme,
+            y2kTheme,
+            celestialTheme,
+            starryNeonTheme,
+            pixelTheme
+        };
+
+        function applyColorScheme(scheme) {
+            for (let key in scheme) {
+                document.documentElement.style.setProperty(key, scheme[key]);
+            }
+        }
+
+        function setColorSchemeFromLocalStorage() {
+            const savedScheme = localStorage.getItem('colorScheme');
+            if (savedScheme && schemes[savedScheme]) {
+                applyColorScheme(schemes[savedScheme]);
+                document.getElementById('colorSchemeSelect').value = savedScheme;
+                if (localStorage.getItem('cookieConsent') === 'accepted') {
+                    document.cookie = 'colorScheme=' + savedScheme + '; path=/; max-age=31536000; SameSite=Lax';
+                }
+            } else {
+                applyColorScheme(darkScheme);
+                document.getElementById('colorSchemeSelect').value = 'darkScheme';
+            }
+        }
+
+        document.getElementById('colorSchemeSelect').addEventListener('change', function() {
+            const selectedScheme = this.value;
+            localStorage.setItem('colorScheme', selectedScheme);
+            if (localStorage.getItem('cookieConsent') === 'accepted') {
+                document.cookie = 'colorScheme=' + selectedScheme + '; path=/; max-age=31536000; SameSite=Lax';
+            }
+            applyColorScheme(schemes[selectedScheme]);
+        });
+
+        setColorSchemeFromLocalStorage();
+
+        function setCookieConsent(decision) {
+            localStorage.setItem('cookieConsent', decision);
+            document.getElementById('cookieBanner').style.display = 'none';
+            if (decision === 'accepted') {
+                const s = localStorage.getItem('colorScheme') || 'darkScheme';
+                document.cookie = 'colorScheme=' + s + '; path=/; max-age=31536000; SameSite=Lax';
+            } else {
+                document.cookie = 'colorScheme=; path=/; max-age=0; SameSite=Lax';
+            }
+        }
+
+        if (!localStorage.getItem('cookieConsent')) {
+            document.getElementById('cookieBanner').style.display = 'flex';
+        }
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => {
+                if (link.href === window.location.href) {
+                    link.style.fontWeight = 'bold';
+                    link.style.pointerEvents = 'none';
+                }
+            });
+        });
+    </script>
+
+    <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background-color:var(--form-bg-color);border-top:1px solid var(--form-border-color);padding:12px 24px;z-index:999;align-items:center;gap:16px;font-size:0.85rem;">
+        <span style="flex:1;color:var(--text-color);">This app uses a preference cookie to sync your color theme between apps. It is not used for tracking or advertising.</span>
+        <button onclick="setCookieConsent('accepted')" style="padding:6px 16px;font-size:0.85rem;flex-shrink:0;">Accept</button>
+        <button onclick="setCookieConsent('declined')" style="background:transparent;border:1px solid var(--form-border-color);color:var(--text-color);padding:6px 16px;font-size:0.85rem;flex-shrink:0;">Decline</button>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+    window.showToast = function(msg, type, duration) {
+        type = type || 'info'; duration = duration || 3000;
+        var t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.textContent = msg;
+        document.getElementById('toastContainer').appendChild(t);
+        requestAnimationFrame(function() { requestAnimationFrame(function() { t.classList.add('show'); }); });
+        setTimeout(function() {
+            t.classList.remove('show');
+            setTimeout(function() { t.remove(); }, 300);
+        }, duration);
+    };
+
+    (function(){
+        var pLoaded = false;
+        window.toggleProjSwitcher = async function(e) {
+            e.stopPropagation();
+            var sw = document.getElementById('projSwitcher');
+            var open = sw.style.display !== 'none';
+            sw.style.display = open ? 'none' : 'block';
+            if (!open && !pLoaded) {
+                pLoaded = true;
+                try {
+                    var projects = await fetch('/api/projects/recent').then(r=>r.json());
+                    var list = document.getElementById('projSwitcherList');
+                    if (!projects.length) { list.innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px 6px;">No projects yet</div>'; return; }
+                    list.innerHTML = projects.map(p =>
+                        '<a href="/projects/'+p._id+'" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:13px;text-decoration:none;color:inherit;" onmouseover="this.style.background=\'var(--form-border-color)22\'" onmouseout="this.style.background=\'\'">'+
+                        (p.color ? '<span style="width:8px;height:8px;border-radius:50%;background:'+p.color+';flex-shrink:0;display:inline-block;"></span>' : '')+
+                        '<span>'+p.name+'</span></a>'
+                    ).join('');
+                } catch(e2) {}
+            }
+        };
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#projSwitcher') && !e.target.closest('#projSwitcherBtn'))
+                document.getElementById('projSwitcher').style.display = 'none';
+        });
+    })();
+
+    (async function() {
+        try {
+            var bd = await fetch('/api/me/birthday').then(r=>r.json());
+            if (bd && bd.isBirthday) {
+                // Confetti burst
+                var canvas = document.createElement('canvas');
+                canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998;';
+                document.body.appendChild(canvas);
+                var ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+                var particles = Array.from({length:120}, function() { return {
+                    x: Math.random()*canvas.width, y: -10,
+                    vx: (Math.random()-0.5)*4, vy: Math.random()*3+2,
+                    color: ['#e74c3c','#f39c12','#27ae60','#3498db','#9b59b6','#e91e63'][Math.floor(Math.random()*6)],
+                    r: Math.random()*6+3, a: Math.random()*Math.PI*2
+                }; });
+                var frame = 0;
+                function drawConfetti() {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    particles.forEach(function(p) {
+                        p.x += p.vx; p.y += p.vy; p.a += 0.05;
+                        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+                        ctx.fillStyle = p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r);
+                        ctx.restore();
+                    });
+                    particles = particles.filter(function(p) { return p.y < canvas.height+20; });
+                    if (frame++ < 180 && particles.length) requestAnimationFrame(drawConfetti);
+                    else canvas.remove();
+                }
+                drawConfetti();
+                showToast('Happy Birthday, ' + bd.name + '!', 'success', 6000);
+            }
+        } catch(e) {}
+    })();
+    </script>
+
+    <!-- Keyboard shortcuts overlay -->
+    <div id="shortcutOverlay" style="display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.65); align-items:center; justify-content:center;" onclick="if(event.target===this)document.getElementById('shortcutOverlay').style.display='none'">
+        <div style="background:var(--background-color); border:1px solid var(--form-border-color); border-radius:12px; padding:24px 28px; width:380px; max-width:94vw; max-height:80vh; overflow-y:auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h3 style="margin:0; font-size:16px;">Keyboard Shortcuts</h3>
+                <button onclick="document.getElementById('shortcutOverlay').style.display='none'" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.45; color:inherit;">✕</button>
+            </div>
+            <div style="font-size:13px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between;"><span>Show this overlay</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">?</kbd></div>
+                <div style="display:flex; justify-content:space-between;"><span>Switch app</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">G A</kbd></div>
+                <div style="opacity:0.45; font-size:11px; margin:4px 0 2px; text-transform:uppercase; letter-spacing:0.05em;">Canvas (Cards page)</div>
+                <div style="display:flex; justify-content:space-between;"><span>Undo last move</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">Ctrl+Z</kbd></div>
+                <div style="display:flex; justify-content:space-between;"><span>Zoom in/out</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">Ctrl+Scroll</kbd></div>
+                <div style="display:flex; justify-content:space-between;"><span>Multi-select cards</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">Shift+Click</kbd></div>
+                <div style="display:flex; justify-content:space-between;"><span>Cancel connect</span><kbd style="background:var(--form-bg-color); border:1px solid var(--form-border-color); border-radius:4px; padding:2px 8px; font-size:12px;">Esc</kbd></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        if (e.key === '?') {
+            e.preventDefault();
+            var ol = document.getElementById('shortcutOverlay');
+            ol.style.display = ol.style.display === 'none' ? 'flex' : 'none';
+        }
+    });
+    </script>
+</body>
+</html>

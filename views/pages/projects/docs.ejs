@@ -1,0 +1,1566 @@
+<% var name = "Docs"; %>
+
+<style>
+    /* ── Layout ──────────────────────────────────────────────────────────────── */
+    .docs-layout { display: flex; height: calc(100vh - 120px); overflow: hidden; }
+
+    /* ── Collapsible side panels ─────────────────────────────────────────────── */
+    .side-panel { flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--form-border-color); overflow: hidden; transition: width 0.18s ease; }
+    .side-panel.collapsed { width: 32px !important; }
+    .side-panel.collapsed .panel-scroll,
+    .side-panel.collapsed .panel-label { display: none; }
+    .side-panel.collapsed .panel-collapse-btn::before { content: '▶'; }
+
+    .panel-header { display: flex; align-items: center; gap: 6px; padding: 9px 10px; border-bottom: 1px solid var(--form-border-color); flex-shrink: 0; min-height: 36px; box-sizing: border-box; }
+    .panel-label { flex: 1; font-size: 11px; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; }
+    .panel-collapse-btn { background: none; border: none; cursor: pointer; opacity: 0.4; font-size: 10px; padding: 2px 4px; color: inherit; flex-shrink: 0; line-height: 1; }
+    .panel-collapse-btn:hover { opacity: 0.8; }
+    .panel-collapse-btn::before { content: '◀'; }
+    .panel-scroll { flex: 1; overflow-y: auto; }
+
+    /* ── Doc list ────────────────────────────────────────────────────────────── */
+    #docsNav { width: 200px; }
+    .doc-nav-item { display: flex; align-items: center; gap: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
+    .doc-nav-item:hover { background: var(--form-bg-color); }
+    .doc-nav-item.active { border-left-color: var(--link-color); font-weight: 600; }
+    .doc-nav-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .research-tag { font-size: 10px; opacity: 0.5; background: var(--form-border-color); padding: 1px 5px; border-radius: 6px; flex-shrink: 0; }
+    .doc-nav-add { padding: 7px 14px; opacity: 0.5; font-size: 13px; cursor: pointer; }
+    .doc-nav-add:hover { opacity: 1; }
+    .rename-input { font-size: 13px; border: 1px solid var(--form-border-color); border-radius: 4px; padding: 1px 4px; background: var(--background-color); color: inherit; width: 110px; }
+
+    /* ── Section list ────────────────────────────────────────────────────────── */
+    #sectionsNav { width: 170px; }
+    .sec-nav-item { padding: 7px 12px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .sec-nav-item:hover { background: var(--form-bg-color); }
+    .sec-nav-item.active { border-left-color: var(--link-color); font-weight: 600; }
+
+    /* ── Main docs body ──────────────────────────────────────────────────────── */
+    .docs-body { flex: 1; display: flex; overflow: hidden; min-width: 0; }
+    .docs-editor-area { flex: 1; overflow-y: auto; padding: 20px 24px; min-width: 0; }
+    .docs-ref-panel { width: 230px; flex-shrink: 0; border-left: 1px solid var(--form-border-color); overflow-y: auto; padding: 14px; display: none; }
+    .docs-ref-panel.open { display: block; }
+
+    /* ── Doc meta ────────────────────────────────────────────────────────────── */
+    .doc-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .doc-title-edit { font-size: 18px; font-weight: 700; border: none; background: none; color: inherit; padding: 0; flex: 1; min-width: 0; }
+    .doc-title-edit:focus { outline: 1px solid var(--form-border-color); border-radius: 4px; padding: 2px 6px; }
+    .btn-ghost { background: none; border: 1px solid var(--form-border-color); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: inherit; }
+    .btn-ghost:hover { opacity: 0.7; }
+    .btn-ghost.active { background: var(--button-bg-color); }
+    .btn-danger { color: #e74c3c; border-color: #e74c3c44; }
+
+    /* ── View mode toggle ────────────────────────────────────────────────────── */
+    .view-mode-bar { display: flex; gap: 0; margin-bottom: 16px; border: 1px solid var(--form-border-color); border-radius: 6px; overflow: hidden; width: fit-content; }
+    .view-mode-btn { padding: 5px 14px; font-size: 12px; cursor: pointer; border: none; background: none; color: inherit; }
+    .view-mode-btn.active { background: var(--button-bg-color); }
+    .view-mode-btn:not(:last-child) { border-right: 1px solid var(--form-border-color); }
+
+    /* ── Section blocks (by-section view) ───────────────────────────────────── */
+    .sec-block { border: 1px solid var(--form-border-color); border-radius: 8px; margin-bottom: 12px; overflow: hidden; scroll-margin-top: 12px; }
+    .sec-block-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--form-bg-color); font-size: 14px; font-weight: 500; cursor: pointer; user-select: none; }
+    .sec-block-title { flex: 1; }
+    .sec-block-body { padding: 14px; }
+    .sec-block-body.hidden { display: none; }
+    .section-textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 180px; font-size: 14px; line-height: 1.6; font-family: inherit; padding: 10px 12px; border: 1px solid var(--form-border-color); border-radius: 6px; background: var(--background-color); color: inherit; }
+    .save-indicator { font-size: 12px; opacity: 0.5; margin-left: 6px; }
+    .word-count { font-size: 11px; opacity: 0.4; margin-top: 3px; display: block; }
+
+    /* ── Outline panel (toggleable at bottom of each section) ───────────────── */
+    .outline-panel { margin-top: 10px; border-top: 1px solid var(--form-border-color); padding-top: 10px; display: none; }
+    .outline-panel.open { display: block; }
+    .outline-toggle-btn { font-size: 11px; background: none; border: 1px solid var(--form-border-color); border-radius: 4px; cursor: pointer; color: inherit; padding: 2px 8px; opacity: 0.55; }
+    .outline-toggle-btn:hover { opacity: 1; }
+    .outline-textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 70px; font-size: 13px; line-height: 1.5; font-family: inherit; padding: 8px 10px; border: 1px solid var(--form-border-color); border-radius: 6px; background: var(--background-color); color: inherit; }
+
+    /* ── Whole-doc view ──────────────────────────────────────────────────────── */
+    .whole-doc-view { font-size: 14px; line-height: 1.8; }
+    .whole-doc-sec { margin-bottom: 32px; }
+    .whole-doc-sec-title { font-size: 18px; font-weight: 700; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--form-border-color); }
+    .whole-doc-content { white-space: pre-wrap; opacity: 0.85; margin: 0; }
+    .whole-doc-empty { opacity: 0.35; font-style: italic; margin: 0; }
+
+    /* ── Drag handle ─────────────────────────────────────────────────────────── */
+    .drag-handle { cursor: grab; opacity: 0.3; font-size: 16px; padding: 0 4px; user-select: none; }
+    .drag-handle:hover { opacity: 0.7; }
+    .sec-block.dragging-sec { opacity: 0.4; }
+    .sec-block.drag-over-sec { border-top: 2px solid var(--link-color); }
+
+    /* ── Add section button ──────────────────────────────────────────────────── */
+    .add-section-btn { font-size: 13px; opacity: 0.6; cursor: pointer; border: 1px dashed var(--form-border-color); background: none; border-radius: 6px; padding: 7px 14px; color: inherit; margin-top: 4px; width: 100%; text-align: left; }
+    .add-section-btn:hover { opacity: 1; }
+
+    /* ── Research canvas ─────────────────────────────────────────────────────── */
+    .research-canvas { position: relative; min-height: 520px; background-image: radial-gradient(circle, var(--form-border-color) 1px, transparent 1px); background-size: 28px 28px; border-radius: 8px; overflow: hidden; border: 1px solid var(--form-border-color); }
+    .research-card { position: absolute; width: 220px; border: 1.5px solid var(--form-border-color); border-radius: 8px; padding: 12px; background: var(--form-bg-color); cursor: grab; user-select: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 2; }
+    .research-card:active { cursor: grabbing; z-index: 10; }
+    .research-card.connecting-source { box-shadow: 0 0 0 2px #4a90d9; }
+    .rc-group { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; background: var(--form-border-color); padding: 1px 6px; border-radius: 8px; display: inline-block; margin-bottom: 4px; }
+    .rc-title { margin: 0 0 4px; font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .rc-desc { margin: 0 0 4px; font-size: 12px; opacity: 0.65; }
+    .rc-content { margin: 0; font-size: 11px; opacity: 0.55; white-space: pre-wrap; max-height: 60px; overflow: hidden; }
+    .rc-reflink { font-size: 11px; opacity: 0.45; margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rc-media { max-width: 100%; max-height: 80px; border-radius: 4px; margin-top: 6px; object-fit: cover; display: block; }
+    .rc-actions { display: flex; gap: 4px; margin-top: 8px; }
+    .rc-btn { font-size: 11px; background: none; border: 1px solid var(--form-border-color); border-radius: 4px; padding: 2px 8px; cursor: pointer; color: inherit; opacity: 0.45; }
+    .rc-btn:hover { opacity: 1; }
+    .rc-connect-btn.primed { opacity: 1; color: #4a90d9; border-color: #4a90d9; }
+    .res-fab { position: absolute; bottom: 16px; right: 16px; z-index: 20; width: 48px; height: 48px; border-radius: 50%; background: #27ae60; color: #fff; font-size: 26px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: background 0.15s, transform 0.1s; }
+    .res-fab:hover { background: #219a52; transform: scale(1.07); }
+    @keyframes marchingAnts { to { stroke-dashoffset: -20; } }
+    .res-drag-line { animation: marchingAnts 0.5s linear infinite; }
+    #resConnPanel { display: none; position: fixed; z-index: 300; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 14px; min-width: 200px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    #resConnPanel label { font-size: 11px; opacity: 0.6; display: block; margin-bottom: 3px; }
+    #resConnPanel .rcp-field { margin-bottom: 8px; }
+    #resConnPanel input, #resConnPanel select { width: 100%; box-sizing: border-box; font-size: 12px; }
+
+    /* ── Version panel ───────────────────────────────────────────────────────── */
+    .docs-version-panel { display: none; position: fixed; right: 16px; top: 80px; width: 260px; background: var(--form-bg-color); border: 1px solid var(--form-border-color); border-radius: 8px; padding: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 200; max-height: 70vh; overflow-y: auto; }
+
+    /* ── Ref panel ───────────────────────────────────────────────────────────── */
+    .ref-panel-title { font-size: 12px; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; }
+    .ref-panel-title:first-child { margin-top: 0; }
+    .ref-doc-item { font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--form-border-color); }
+    .ref-doc-item:last-child { border-bottom: none; }
+    .ref-proj-tag { font-size: 11px; opacity: 0.5; }
+
+    /* ── Modals ──────────────────────────────────────────────────────────────── */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--background-color); border: 1px solid var(--form-border-color); border-radius: 10px; padding: 22px; width: 400px; max-width: 94vw; max-height: 90vh; overflow-y: auto; }
+    .modal-box h3 { margin-top: 0; font-size: 16px; }
+    .modal-field { margin-bottom: 10px; }
+    .modal-field label { font-size: 12px; opacity: 0.6; display: block; margin-bottom: 3px; }
+    .modal-field input, .modal-field textarea, .modal-field select { width: 100%; box-sizing: border-box; font-size: 13px; }
+    .modal-field textarea { resize: vertical; min-height: 70px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    .modal-actions button { padding: 6px 16px; cursor: pointer; font-size: 13px; }
+
+    /* ── Folder tree ─────────────────────────────────────────────────────────── */
+    .doc-nav-icon { font-size: 14px; flex-shrink: 0; cursor: pointer; opacity: 0.6; transition: opacity 0.12s; }
+    .doc-nav-icon:hover { opacity: 1; }
+    .folder-arrow { font-size: 9px; opacity: 0.45; flex-shrink: 0; width: 10px; user-select: none; }
+    .doc-nav-folder { font-style: normal; }
+    .folder-children { /* indent handled per-node via JS */ }
+    .doc-nav-add-row { display: flex; gap: 0; border-top: 1px solid var(--form-border-color); }
+    .doc-nav-add-btn { flex: 1; padding: 7px 8px; opacity: 0.5; font-size: 12px; cursor: pointer; text-align: center; }
+    .doc-nav-add-btn:hover { opacity: 1; background: var(--form-bg-color); }
+    .doc-nav-upload-zone { margin: 6px 10px; border: 1.5px dashed var(--form-border-color); border-radius: 6px; padding: 8px; text-align: center; font-size: 11px; opacity: 0.45; cursor: pointer; transition: border-color 0.15s, opacity 0.15s; }
+    .doc-nav-upload-zone:hover, .doc-nav-upload-zone.drag-over { border-color: var(--link-color); opacity: 1; }
+
+    /* ── File viewer ─────────────────────────────────────────────────────────── */
+    .file-viewer { padding: 4px 0; }
+    .file-viewer-topbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .file-viewer-img { max-width: 100%; border-radius: 8px; display: block; }
+    .file-viewer-video, .file-viewer-audio { width: 100%; border-radius: 8px; }
+    .file-viewer-pdf { width: 100%; height: 72vh; border: none; border-radius: 8px; border: 1px solid var(--form-border-color); }
+    .file-viewer-generic { border: 1px solid var(--form-border-color); border-radius: 10px; padding: 32px 24px; text-align: center; }
+    .file-info-row { font-size: 12px; opacity: 0.45; margin-top: 6px; }
+    .file-versions { margin-top: 20px; border-top: 1px solid var(--form-border-color); padding-top: 14px; }
+    .file-version-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--form-border-color); font-size: 13px; }
+    .file-version-item:last-child { border-bottom: none; }
+
+    /* ── Icon picker ─────────────────────────────────────────────────────────── */
+    .icon-picker-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-height: 300px; overflow-y: auto; margin-bottom: 8px; }
+    .icon-picker-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 3px; border-radius: 5px; cursor: pointer; border: 1.5px solid transparent; }
+    .icon-picker-item:hover { border-color: var(--link-color); background: var(--form-bg-color); }
+    .icon-picker-item.selected { border-color: var(--link-color); background: var(--form-bg-color); }
+    .icon-picker-item ion-icon { font-size: 18px; }
+    .icon-picker-item span { font-size: 8px; opacity: 0.45; text-align: center; line-height: 1.2; overflow: hidden; white-space: nowrap; width: 100%; text-overflow: ellipsis; }
+    .icon-picker-cat { font-size: 10px; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 4px; font-weight: 600; }
+</style>
+
+<div class="docs-layout">
+
+    <!-- ── Doc list sidebar ──────────────────────────────────────────────────── -->
+    <div class="side-panel" id="docsNav">
+        <div class="panel-header">
+            <span class="panel-label">Documents</span>
+            <button class="panel-collapse-btn" onclick="togglePanel('docsNav')" title="Collapse"></button>
+        </div>
+        <div class="panel-scroll">
+            <!-- JS-rendered tree goes here -->
+            <div id="docTreeRoot"></div>
+            <div class="doc-nav-add-row">
+                <div class="doc-nav-add-btn" onclick="showNewDocModal()">+ Doc</div>
+                <div class="doc-nav-add-btn" onclick="createFolder()" title="Create folder"><ion-icon name="folder-outline" aria-hidden="true"></ion-icon></div>
+                <div class="doc-nav-add-btn" onclick="document.getElementById('fileUploadInput').click()" title="Upload file">↑</div>
+            </div>
+            <!-- Hidden file input for uploads -->
+            <input type="file" id="fileUploadInput" style="display:none;" multiple onchange="handleFileUpload(this.files, null)">
+            <!-- Drag-to-upload zone -->
+            <div class="doc-nav-upload-zone" id="docUploadZone"
+                 onclick="document.getElementById('fileUploadInput').click()"
+                 ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="this.classList.remove('drag-over'); handleFileUpload(event.dataTransfer.files, null); event.preventDefault()">
+                Drop files to upload
+            </div>
+            <div style="padding:8px 14px; border-top:1px solid var(--form-border-color);">
+                <div onclick="toggleImportPanel()" style="font-size:11px; opacity:0.55; cursor:pointer; padding:3px 0;">↑ Import (md/docx/zip)</div>
+                <div id="importPanel" style="display:none; margin-top:6px;">
+                    <input type="file" id="importFile" accept=".md,.zip,.docx" style="font-size:11px; width:100%; margin-bottom:6px;">
+                    <button onclick="importDoc()" style="width:100%; font-size:12px;">Import</button>
+                    <p id="importStatus" style="font-size:11px; opacity:0.6; margin:4px 0 0;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Section list sidebar ──────────────────────────────────────────────── -->
+    <div class="side-panel" id="sectionsNav">
+        <div class="panel-header">
+            <span class="panel-label">Sections</span>
+            <button class="panel-collapse-btn" onclick="togglePanel('sectionsNav')" title="Collapse"></button>
+        </div>
+        <div class="panel-scroll" id="sectionsNavList">
+            <p style="font-size:12px; opacity:0.4; padding:12px;">No doc open</p>
+        </div>
+    </div>
+
+    <!-- ── Main editor + reference panel ─────────────────────────────────────── -->
+    <div class="docs-body">
+        <div class="docs-editor-area" id="docsEditorArea">
+
+            <% if (docs.length === 0) { %>
+                <p style="opacity:0.45; margin-top:60px; text-align:center;">No documents yet. Create one in the sidebar.</p>
+            <% } %>
+
+            <% docs.forEach(function(doc, di) { %>
+            <div class="doc-view" id="docview-<%= doc._id %>" style="display:none;">
+
+                <!-- Title + buttons -->
+                <div class="doc-meta">
+                    <input type="text" class="doc-title-edit" value="<%= doc.title %>"
+                           onblur="renameDoc('<%= doc._id %>', this.value)"
+                           onkeydown="if(event.key==='Enter')this.blur()">
+                    <% if (doc.isResearch) { %><span class="research-tag">Research</span><% } %>
+                    <button type="button" class="btn-ghost" onclick="toggleRefPanel()">References</button>
+                    <button type="button" class="btn-ghost" onclick="toggleVersionPanel('<%= doc._id %>')">History</button>
+                    <button type="button" class="btn-ghost btn-danger"
+                            onclick="showDeleteConfirm('/projects/<%= projectId %>/docs/<%= doc._id %>/delete', 'Delete this document? This cannot be undone.')">
+                        Delete
+                    </button>
+                </div>
+
+                <!-- Version history floating panel -->
+                <div class="docs-version-panel" id="versionPanel-<%= doc._id %>">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:12px; font-weight:600;">Version History</span>
+                        <button onclick="toggleVersionPanel('<%= doc._id %>')" class="btn-ghost" style="padding:2px 6px; font-size:11px;">✕</button>
+                    </div>
+                    <% doc.sections.forEach(function(sec) { %>
+                        <% if (sec.versions && sec.versions.length > 0) { %>
+                            <p style="font-size:11px; font-weight:600; opacity:0.5; margin:10px 0 4px;"><%= sec.title %></p>
+                            <% sec.versions.slice().reverse().forEach(function(v, vi) { %>
+                                <div style="border:1px solid var(--form-border-color); border-radius:6px; padding:7px 10px; margin-bottom:5px; font-size:12px;">
+                                    <div style="opacity:0.6;"><%= v.savedBy || 'Unknown' %> · <span class="humanized-date" data-date="<%= v.savedAt ? new Date(v.savedAt).toISOString() : '' %>"></span></div>
+                                    <div style="opacity:0.75; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px;"><%= (v.content || v.outline || '').substring(0,60) %>…</div>
+                                    <button onclick="restoreVersion('<%= sec._id %>','<%= doc._id %>',<%= sec.versions.length - 1 - vi %>)" class="btn-ghost" style="margin-top:5px; font-size:11px; padding:2px 8px;">Restore</button>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    <% }) %>
+                    <% if (!doc.sections.some(function(s){ return s.versions && s.versions.length > 0; })) { %>
+                        <p style="font-size:12px; opacity:0.45;">No saved versions yet.</p>
+                    <% } %>
+                </div>
+
+                <% if (doc.docType === 'file') { %>
+
+                    <!-- File viewer -->
+                    <div class="file-viewer" id="fileviewer-<%= doc._id %>">
+                        <div class="file-viewer-topbar">
+                            <button type="button" class="btn-ghost" onclick="document.getElementById('versionUploadInput-<%= doc._id %>').click()">↑ Upload new version</button>
+                            <input type="file" id="versionUploadInput-<%= doc._id %>" style="display:none;" onchange="uploadNewVersion('<%= doc._id %>', this.files[0])">
+                            <% var convertableMimes = ['application/pdf', 'text/markdown', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']; %>
+                            <% var isConvertable = (doc.mimeType && convertableMimes.indexOf(doc.mimeType) !== -1) || (doc.fileName && /\.(md|docx|pdf|txt)$/i.test(doc.fileName)); %>
+                            <% if (isConvertable) { %>
+                                <button type="button" class="btn-ghost" onclick="convertToDoc('<%= doc._id %>')">Convert to Catalogue Doc</button>
+                            <% } %>
+                            <% if (doc.fileUrl) { %>
+                                <a href="<%= doc.fileUrl %>" download="<%= doc.fileName %>" class="btn-ghost" style="text-decoration:none;">↓ Download</a>
+                            <% } %>
+                        </div>
+
+                        <% if (doc.mimeType && doc.mimeType.startsWith('image/')) { %>
+                            <img class="file-viewer-img" src="<%= doc.fileUrl %>" alt="<%= doc.fileName || '' %>">
+                        <% } else if (doc.mimeType && doc.mimeType.startsWith('video/')) { %>
+                            <video class="file-viewer-video" controls>
+                                <source src="<%= doc.fileUrl %>" type="<%= doc.mimeType %>">
+                                Your browser does not support video playback.
+                            </video>
+                        <% } else if (doc.mimeType && doc.mimeType.startsWith('audio/')) { %>
+                            <audio class="file-viewer-audio" controls>
+                                <source src="<%= doc.fileUrl %>" type="<%= doc.mimeType %>">
+                            </audio>
+                        <% } else if (doc.mimeType === 'application/pdf') { %>
+                            <iframe class="file-viewer-pdf" src="<%= doc.fileUrl %>"></iframe>
+                        <% } else { %>
+                            <div class="file-viewer-generic">
+                                <ion-icon name="<%= doc.icon || 'attach-outline' %>" style="font-size:52px; opacity:0.35;"></ion-icon>
+                                <p style="font-size:15px; font-weight:500; margin:12px 0 4px;"><%= doc.fileName || doc.title %></p>
+                                <% if (doc.fileSize) { %><p class="file-info-row"><%= (doc.fileSize / 1024 / 1024).toFixed(2) %> MB</p><% } %>
+                                <% if (doc.fileUrl) { %>
+                                    <a href="<%= doc.fileUrl %>" download="<%= doc.fileName %>" class="btn-ghost" style="display:inline-block; margin-top:14px; text-decoration:none;">↓ Download file</a>
+                                <% } %>
+                            </div>
+                        <% } %>
+
+                        <% if (doc.fileUrl) { %>
+                            <p class="file-info-row">
+                                <%= doc.fileName || '' %>
+                                <% if (doc.mimeType) { %>&nbsp;·&nbsp;<%= doc.mimeType %><% } %>
+                                <% if (doc.fileSize) { %>&nbsp;·&nbsp;<%= (doc.fileSize / 1024 / 1024).toFixed(2) %> MB<% } %>
+                            </p>
+                        <% } %>
+
+                        <% if (doc.fileVersions && doc.fileVersions.length > 0) { %>
+                            <div class="file-versions">
+                                <p style="font-size:12px; opacity:0.45; margin:0 0 8px; font-weight:600;">Previous Versions</p>
+                                <% doc.fileVersions.slice().reverse().forEach(function(v, vi) { %>
+                                    <div class="file-version-item">
+                                        <span style="flex:1; opacity:0.7; font-size:12px;"><%= v.name || ('Version ' + (doc.fileVersions.length - vi)) %></span>
+                                        <% if (v.size) { %><span style="opacity:0.4; font-size:11px;"><%= (v.size / 1024).toFixed(0) %> KB</span><% } %>
+                                        <a href="<%= v.url %>" download class="btn-ghost" style="font-size:11px; padding:2px 8px; text-decoration:none;">↓</a>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+
+                <% } else if (!doc.isResearch) { %>
+
+                    <!-- View mode toggle -->
+                    <div class="view-mode-bar">
+                        <button class="view-mode-btn active" id="vmBy-<%= doc._id %>"
+                                onclick="switchViewMode('<%= doc._id %>', 'by-section')">By Section</button>
+                        <button class="view-mode-btn" id="vmWhole-<%= doc._id %>"
+                                onclick="switchViewMode('<%= doc._id %>', 'whole-doc')">Whole Doc</button>
+                    </div>
+
+                    <!-- By-section view -->
+                    <div id="bysec-<%= doc._id %>">
+                        <% if (doc.sections.length === 0) { %>
+                            <p style="opacity:0.45; font-size:13px;" id="nosec-<%= doc._id %>">No sections yet. Add one below.</p>
+                        <% } %>
+                        <% doc.sections.forEach(function(sec) { %>
+                            <div class="sec-block" id="sec-<%= sec._id %>" data-secid="<%= sec._id %>">
+                                <div class="sec-block-header" onclick="toggleSecBlock(this)">
+                                    <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+                                    <span class="sec-block-title"><%= sec.title %></span>
+                                    <button class="outline-toggle-btn" type="button"
+                                            onclick="event.stopPropagation(); toggleOutlinePanel('<%= sec._id %>')">Outline</button>
+                                    <button class="btn-ghost btn-danger" type="button" style="padding:2px 6px; font-size:11px;"
+                                            onclick="event.stopPropagation(); showDeleteConfirm('/projects/<%= projectId %>/docs/<%= doc._id %>/sections/<%= sec._id %>/delete', 'Delete this section?')">✕</button>
+                                </div>
+                                <div class="sec-block-body">
+                                    <textarea class="section-textarea" style="min-height:200px;"
+                                              placeholder="Write your content here..."
+                                              oninput="autoSave('save','<%= projectId %>','<%= doc._id %>','<%= sec._id %>',this); updateWordCount('<%= sec._id %>', this.value)"><%= sec.content || '' %></textarea>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span class="word-count" id="wc-<%= sec._id %>">0 words</span>
+                                        <span class="save-indicator" id="si-save-<%= sec._id %>"></span>
+                                    </div>
+                                    <!-- Outline panel (toggleable) -->
+                                    <div class="outline-panel" id="outline-panel-<%= sec._id %>">
+                                        <p style="font-size:11px; opacity:0.5; margin:0 0 5px;">Section Outline</p>
+                                        <textarea class="outline-textarea"
+                                                  placeholder="Planning notes for this section..."
+                                                  oninput="autoSave('outline','<%= projectId %>','<%= doc._id %>','<%= sec._id %>',this)"><%= sec.outline || '' %></textarea>
+                                        <span class="save-indicator" id="si-outline-<%= sec._id %>"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                        <button type="button" class="add-section-btn"
+                                onclick="showAddSecModal('<%= doc._id %>')">+ Add Section</button>
+                    </div>
+
+                    <!-- Whole-doc view (populated dynamically) -->
+                    <div id="whole-<%= doc._id %>" style="display:none;" class="whole-doc-view">
+                        <p style="font-size:12px; opacity:0.4; margin:0 0 18px;">Read-only · switch to By Section to edit</p>
+                        <% doc.sections.forEach(function(sec) { %>
+                            <div class="whole-doc-sec" id="wdsec-<%= sec._id %>">
+                                <h3 class="whole-doc-sec-title"><%= sec.title %></h3>
+                                <% if (sec.content && sec.content.trim()) { %>
+                                    <p class="whole-doc-content"><%= sec.content %></p>
+                                <% } else { %>
+                                    <p class="whole-doc-empty">No content yet.</p>
+                                <% } %>
+                            </div>
+                        <% }) %>
+                        <% if (doc.sections.length === 0) { %>
+                            <p style="opacity:0.45;">No sections yet.</p>
+                        <% } %>
+                    </div>
+
+                <% } else { %>
+
+                    <!-- Research canvas -->
+                    <div class="research-canvas" id="resCanvas-<%= doc._id %>">
+                        <svg id="researchSvg-<%= doc._id %>" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;">
+                            <line id="resDragLine-<%= doc._id %>" class="res-drag-line"
+                                  x1="0" y1="0" x2="0" y2="0"
+                                  stroke="#4a90d9" stroke-width="2" stroke-dasharray="6,4"
+                                  visibility="hidden" pointer-events="none"/>
+                        </svg>
+                        <% doc.sections.forEach(function(sec, si) { %>
+                            <div class="research-card"
+                                 id="rsec-<%= sec._id %>"
+                                 data-id="<%= sec._id %>"
+                                 data-docid="<%= doc._id %>"
+                                 data-conns='<%= JSON.stringify((sec.connections || []).filter(function(c){ return c.targetId; }).map(function(c){ return { targetId: c.targetId.toString(), color: c.color||"#4a90d9", width: c.width||1.5, lineStyle: c.lineStyle||"solid", symbol: c.symbol||"none", label: c.label||"" }; })) %>'
+                                 data-title="<%= encodeURIComponent(sec.title || '') %>"
+                                 data-desc="<%= encodeURIComponent(sec.description || '') %>"
+                                 data-group="<%= encodeURIComponent(sec.group || '') %>"
+                                 data-content="<%= encodeURIComponent(sec.content || '') %>"
+                                 data-reflink="<%= encodeURIComponent(sec.refLink || '') %>"
+                                 data-mediaurl="<%= sec.mediaUrl || '' %>"
+                                 style="left:<%= (si % 3) * 240 + 20 %>px; top:<%= Math.floor(si / 3) * 190 + 20 %>px;">
+                                <% if (sec.group) { %><span class="rc-group"><%= sec.group %></span><% } %>
+                                <p class="rc-title"><%= sec.title %></p>
+                                <% if (sec.description) { %><p class="rc-desc"><%= sec.description %></p><% } %>
+                                <% if (sec.content || sec.outline) { %><p class="rc-content"><%= (sec.content || sec.outline || '').substring(0, 120) %></p><% } %>
+                                <% if (sec.refLink) { %><p class="rc-reflink"><%= sec.refLink %></p><% } %>
+                                <% if (sec.mediaUrl) { %><img class="rc-media" src="<%= sec.mediaUrl %>" alt=""><% } %>
+                                <div class="rc-actions">
+                                    <button class="rc-btn rc-connect-btn" type="button"
+                                            onmousedown="startResConnDrag(event,'<%= sec._id %>','<%= doc._id %>')">⬤</button>
+                                    <button class="rc-btn" type="button"
+                                            onclick="event.stopPropagation(); openEditResCard('<%= sec._id %>','<%= doc._id %>')">Edit</button>
+                                    <button class="rc-btn" type="button"
+                                            onclick="event.stopPropagation(); showDeleteConfirm('/projects/<%= projectId %>/docs/<%= doc._id %>/sections/<%= sec._id %>/delete', 'Delete this card?')">✕</button>
+                                </div>
+                            </div>
+                        <% }) %>
+                        <button class="res-fab" type="button"
+                                onclick="showAddResCardModal('<%= doc._id %>')"
+                                title="Add Research Card">+</button>
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="btn-ghost"
+                                id="resConnBtn-<%= doc._id %>"
+                                onclick="toggleResConnect('<%= doc._id %>', this)">Connect Cards</button>
+                        <button type="button" class="btn-ghost"
+                                onclick="autoOrganize('<%= doc._id %>')">Auto-Organize</button>
+                    </div>
+
+                <% } /* end file/doc/research if-chain */ %>
+            </div>
+            <% }) %>
+
+        </div>
+
+        <!-- Reference panel -->
+        <div class="docs-ref-panel" id="refPanel">
+            <p class="ref-panel-title">This Project's Docs</p>
+            <% docs.forEach(function(d) { %>
+                <div class="ref-doc-item">
+                    <strong><%= d.title %></strong><% if (d.isResearch) { %> <span class="ref-proj-tag">research</span><% } %>
+                    <% d.sections.forEach(function(s) { %>
+                        <div style="font-size:12px; padding:1px 0 1px 10px; opacity:0.65;"><%= s.title %></div>
+                    <% }) %>
+                </div>
+            <% }) %>
+            <% if (relatedDocs.length > 0) { %>
+                <p class="ref-panel-title">Related Projects</p>
+                <% relatedDocs.forEach(function(rd) { %>
+                    <div class="ref-doc-item">
+                        <strong><%= rd.docTitle %></strong><br>
+                        <span class="ref-proj-tag"><%= rd.projectName %></span>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- Research connection panel -->
+<div id="resConnPanel">
+    <div style="font-size:11px; opacity:0.5; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Connection</div>
+    <div class="rcp-field"><label>Color</label><input type="color" id="rcpColor" oninput="resConnLivePreview()"></div>
+    <div class="rcp-field"><label>Width</label><input type="range" id="rcpWidth" min="1" max="6" step="0.5" oninput="resConnLivePreview()"></div>
+    <div class="rcp-field"><label>Style</label>
+        <select id="rcpStyle" onchange="resConnLivePreview()">
+            <option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option>
+        </select>
+    </div>
+    <div class="rcp-field"><label>Midpoint Symbol</label>
+        <select id="rcpSymbol" onchange="resConnLivePreview()">
+            <option value="none">None</option><option value="circle">Circle ●</option><option value="triangle">Triangle ▲</option>
+            <option value="square">Square ■</option><option value="diamond">Diamond ◆</option><option value="hexagon">Hexagon ⬡</option>
+            <option value="star">Star ★</option><option value="plus">Plus ✚</option><option value="x">X ✕</option><option value="arrow">Arrow ➤</option>
+        </select>
+    </div>
+    <div class="rcp-field" style="margin-bottom:12px;"><label>Label</label><input type="text" id="rcpLabel" placeholder="Optional..." oninput="resConnLivePreview()"></div>
+    <div style="display:flex; gap:6px;">
+        <button type="button" onclick="saveResConnProps()" style="flex:1; font-size:12px; padding:5px;">Save</button>
+        <button type="button" onclick="disconnectResConn()" style="font-size:12px; padding:5px; color:#e74c3c; border-color:#e74c3c44; border:1px solid; border-radius:4px; background:none; cursor:pointer;">Remove</button>
+        <button type="button" onclick="closeResConnPanel()" style="font-size:12px; padding:5px; background:none; border:1px solid var(--form-border-color); border-radius:4px; cursor:pointer; color:inherit;">✕</button>
+    </div>
+</div>
+
+<!-- ── Modals ─────────────────────────────────────────────────────────────────── -->
+
+<!-- Add section -->
+<div class="modal-overlay" id="addSecModal">
+    <div class="modal-box">
+        <h3>Add Section</h3>
+        <div class="modal-field">
+            <label>Section Title</label>
+            <input type="text" id="addSecTitle" placeholder="Enter section title...">
+        </div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal('addSecModal')">Cancel</button>
+            <button type="button" onclick="submitAddSection()">Add</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add research card -->
+<div class="modal-overlay" id="addResCardModal">
+    <div class="modal-box">
+        <h3>Add Research Card</h3>
+        <div class="modal-field"><label>Title *</label><input type="text" id="arcTitle" placeholder="Card title..."></div>
+        <div class="modal-field"><label>Description</label><input type="text" id="arcDesc" placeholder="Short summary..."></div>
+        <div class="modal-field"><label>Group</label><input type="text" id="arcGroup" placeholder="Group name..."></div>
+        <div class="modal-field"><label>Notes</label><textarea id="arcContent" placeholder="Detailed notes..."></textarea></div>
+        <div class="modal-field"><label>Reference Link</label><input type="text" id="arcRefLink" placeholder="https://..."></div>
+        <div class="modal-field"><label>Media (image)</label><input type="file" id="arcMedia" accept="image/*" style="font-size:12px;"></div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal('addResCardModal')">Cancel</button>
+            <button type="button" onclick="submitAddResCard()">Add</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal-box">
+        <h3>Confirm Delete</h3>
+        <p id="deleteConfirmMsg" style="font-size:14px; opacity:0.7;"></p>
+        <form method="POST" id="deleteConfirmForm">
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+                <button type="submit" style="color:#e74c3c; border-color:#e74c3c44;">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- New Doc / Folder modal -->
+<div class="modal-overlay" id="newDocModal">
+    <div class="modal-box">
+        <h3 id="newDocModalTitle">New Document</h3>
+        <div class="modal-field">
+            <label>Title</label>
+            <input type="text" id="newDocTitle" placeholder="Document title...">
+        </div>
+        <div class="modal-field" id="newDocResearchRow" style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="newDocIsResearch">
+            <label for="newDocIsResearch" style="font-size:13px; opacity:0.8;">Research canvas</label>
+        </div>
+        <div class="modal-field">
+            <label>Place inside folder (optional)</label>
+            <select id="newDocParentSel">
+                <option value="">-- Top level --</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal('newDocModal')">Cancel</button>
+            <button type="button" onclick="submitNewDoc()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Icon picker modal -->
+<div class="modal-overlay" id="iconPickerModal">
+    <div class="modal-box" style="width:480px;">
+        <h3>Choose Icon</h3>
+        <div id="iconPickerContent"></div>
+        <div class="modal-actions" style="margin-top:8px;">
+            <button type="button" onclick="closeModal('iconPickerModal')">Cancel</button>
+            <button type="button" onclick="confirmIconPick()">Reset to default</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit research card -->
+<div class="modal-overlay" id="editResCardModal">
+    <div class="modal-box">
+        <h3>Edit Card</h3>
+        <div class="modal-field"><label>Title</label><input type="text" id="ercTitle" placeholder="Card title..."></div>
+        <div class="modal-field"><label>Description</label><input type="text" id="ercDesc" placeholder="Short summary..."></div>
+        <div class="modal-field"><label>Group</label><input type="text" id="ercGroup" placeholder="Group name..."></div>
+        <div class="modal-field"><label>Notes</label><textarea id="ercContent" placeholder="Detailed notes..."></textarea></div>
+        <div class="modal-field"><label>Reference Link</label><input type="text" id="ercRefLink" placeholder="https://..."></div>
+        <div class="modal-field" style="border-top:1px solid var(--form-border-color); padding-top:10px; margin-top:10px;">
+            <label>Upload Media</label>
+            <form method="POST" enctype="multipart/form-data" id="ercMediaForm">
+                <input type="file" name="media" accept="image/*,video/*" style="font-size:12px;">
+                <button type="submit" class="btn-ghost" style="margin-top:6px; font-size:12px;">Upload</button>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal('editResCardModal')">Cancel</button>
+            <button type="button" onclick="saveResCard()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var projectId = '<%= projectId %>';
+var _addSecDocId = null, _addResDocId = null;
+var _currentDocId = null;
+var _iconPickerDocId = null, _iconPickerSelected = null;
+
+// ── Docs data (for tree) ───────────────────────────────────────────────────────
+var _allDocs = <%- JSON.stringify(docs.map(function(d) {
+    return {
+        _id: d._id.toString(),
+        title: d.title || 'Untitled',
+        docType: d.docType || 'doc',
+        parentId: d.parentId ? d.parentId.toString() : null,
+        icon: d.icon || null,
+        isResearch: !!d.isResearch,
+        fileUrl: d.fileUrl || null,
+        fileName: d.fileName || null,
+        mimeType: d.mimeType || null
+    };
+})) %>;
+
+// ── File type icon (client-side mirror) ───────────────────────────────────────
+function clientFileTypeIcon(mime, name) {
+    if (mime) {
+        if (mime.startsWith('image/')) return 'image-outline';
+        if (mime.startsWith('video/')) return 'film-outline';
+        if (mime.startsWith('audio/')) return 'musical-notes-outline';
+        if (mime === 'application/pdf') return 'document-outline';
+        if (mime.includes('word') || mime.includes('wordprocessingml')) return 'document-text-outline';
+        if (mime.includes('spreadsheet') || mime.includes('excel') || mime === 'text/csv') return 'grid-outline';
+        if (mime.includes('presentation') || mime.includes('powerpoint')) return 'easel-outline';
+        if (mime.includes('zip') || mime.includes('archive') || mime.includes('compressed')) return 'archive-outline';
+        if (mime.startsWith('text/')) return 'document-text-outline';
+    }
+    if (name) {
+        var ext = name.split('.').pop().toLowerCase();
+        var m = {jpg:'image-outline',jpeg:'image-outline',png:'image-outline',gif:'image-outline',svg:'image-outline',webp:'image-outline',mp4:'film-outline',mov:'film-outline',avi:'film-outline',webm:'film-outline',mp3:'musical-notes-outline',wav:'musical-notes-outline',ogg:'musical-notes-outline',flac:'musical-notes-outline',pdf:'document-outline',docx:'document-text-outline',doc:'document-text-outline',md:'code-slash-outline',markdown:'code-slash-outline',txt:'document-text-outline',zip:'archive-outline',rar:'archive-outline',tar:'archive-outline',gz:'archive-outline',psd:'easel-outline',ai:'easel-outline',xlsx:'grid-outline',xls:'grid-outline',csv:'grid-outline',pptx:'easel-outline',ppt:'easel-outline'};
+        return m[ext] || 'attach-outline';
+    }
+    return 'attach-outline';
+}
+
+function getDocIcon(d) {
+    if (d.icon) return d.icon;
+    if (d.docType === 'folder') return 'folder-outline';
+    if (d.docType === 'file') return clientFileTypeIcon(d.mimeType, d.fileName);
+    if (d.isResearch) return 'flask-outline';
+    return 'document-text-outline';
+}
+
+// ── Doc tree ──────────────────────────────────────────────────────────────────
+var _expandedFolders = {};
+
+function buildDocTree(docs) {
+    var map = {};
+    docs.forEach(function(d) { map[d._id] = Object.assign({}, d, { children: [] }); });
+    var roots = [];
+    docs.forEach(function(d) {
+        if (d.parentId && map[d.parentId]) map[d.parentId].children.push(map[d._id]);
+        else roots.push(map[d._id]);
+    });
+    return roots;
+}
+
+function renderDocTree() {
+    var root = document.getElementById('docTreeRoot');
+    if (!root) return;
+    root.innerHTML = '';
+    renderNodes(buildDocTree(_allDocs), root, 0);
+}
+
+function renderNodes(nodes, container, depth) {
+    nodes.forEach(function(d) {
+        var item = document.createElement('div');
+        item.className = 'doc-nav-item' + (_currentDocId === d._id ? ' active' : '');
+        item.id = 'nav-' + d._id;
+        item.style.paddingLeft = (14 + depth * 14) + 'px';
+
+        if (d.docType === 'folder') {
+            var arrow = document.createElement('span');
+            arrow.className = 'folder-arrow';
+            arrow.textContent = _expandedFolders[d._id] ? '▼' : '▶';
+            item.appendChild(arrow);
+        }
+
+        var ico = document.createElement('ion-icon');
+        ico.setAttribute('name', getDocIcon(d));
+        ico.className = 'doc-nav-icon';
+        ico.title = 'Click to change icon';
+        ico.addEventListener('click', function(e) { e.stopPropagation(); openIconPicker(d._id); });
+        item.appendChild(ico);
+
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'doc-nav-name';
+        nameSpan.id = 'navname-' + d._id;
+        nameSpan.textContent = d.title;
+        nameSpan.title = 'Double-click to rename';
+        nameSpan.addEventListener('dblclick', function(e) { startRename(e, d._id); });
+        item.appendChild(nameSpan);
+
+        if (d.isResearch && d.docType === 'doc') {
+            var tag = document.createElement('span');
+            tag.className = 'research-tag';
+            tag.textContent = 'R';
+            item.appendChild(tag);
+        }
+
+        if (d.docType === 'folder') {
+            item.addEventListener('click', function() { toggleFolder(d._id); });
+        } else {
+            item.addEventListener('click', function() { switchDoc(d._id); });
+        }
+
+        container.appendChild(item);
+
+        if (d.docType === 'folder') {
+            var childWrap = document.createElement('div');
+            childWrap.id = 'folder-children-' + d._id;
+            childWrap.style.display = _expandedFolders[d._id] ? '' : 'none';
+            container.appendChild(childWrap);
+            if (d.children.length > 0) renderNodes(d.children, childWrap, depth + 1);
+        }
+    });
+}
+
+function toggleFolder(folderId) {
+    _expandedFolders[folderId] = !_expandedFolders[folderId];
+    renderDocTree();
+}
+
+// ── New Doc / Folder ──────────────────────────────────────────────────────────
+function showNewDocModal() {
+    document.getElementById('newDocModalTitle').textContent = 'New Document';
+    document.getElementById('newDocTitle').value = '';
+    document.getElementById('newDocIsResearch').checked = false;
+    document.getElementById('newDocResearchRow').style.display = '';
+    // Populate folder selector
+    var sel = document.getElementById('newDocParentSel');
+    sel.innerHTML = '<option value="">-- Top level --</option>';
+    _allDocs.filter(function(d) { return d.docType === 'folder'; }).forEach(function(d) {
+        var opt = document.createElement('option'); opt.value = d._id; opt.textContent = d.title; sel.appendChild(opt);
+    });
+    document.getElementById('newDocModal').classList.add('open');
+    setTimeout(function() { document.getElementById('newDocTitle').focus(); }, 50);
+}
+
+function createFolder() {
+    var name = prompt('Folder name:');
+    if (!name) return;
+    fetch('/projects/' + projectId + '/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ title: name, docType: 'folder' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.ok) return;
+        _allDocs.push({ _id: d.doc._id, title: d.doc.title, docType: 'folder', parentId: d.doc.parentId || null, icon: null, isResearch: false, fileUrl: null, fileName: null, mimeType: null });
+        _expandedFolders[d.doc._id] = true;
+        renderDocTree();
+    });
+}
+
+function submitNewDoc() {
+    var title = document.getElementById('newDocTitle').value.trim();
+    var isResearch = document.getElementById('newDocIsResearch').checked;
+    var parentId = document.getElementById('newDocParentSel').value;
+    if (!title) { document.getElementById('newDocTitle').focus(); return; }
+    fetch('/projects/' + projectId + '/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ title: title, isResearch: isResearch, parentId: parentId || undefined })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.ok) return;
+        closeModal('newDocModal');
+        _allDocs.push({ _id: d.doc._id, title: d.doc.title, docType: 'doc', parentId: d.doc.parentId || null, icon: null, isResearch: isResearch, fileUrl: null, fileName: null, mimeType: null });
+        if (d.doc.parentId) _expandedFolders[d.doc.parentId] = true;
+        renderDocTree();
+        // Reload page to get the new doc's editor
+        window.location.reload();
+    });
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleFileUpload(files, parentId) {
+    if (!files || !files.length) return;
+    Array.from(files).forEach(function(file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('title', file.name);
+        if (parentId) fd.append('parentId', parentId);
+        fetch('/projects/' + projectId + '/docs/upload-file', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { alert(d.error || 'Upload failed'); return; }
+                _allDocs.push({ _id: d.doc._id, title: d.doc.title, docType: 'file', parentId: d.doc.parentId || null, icon: d.doc.icon, isResearch: false, fileUrl: d.doc.fileUrl, fileName: d.doc.fileName, mimeType: d.doc.mimeType });
+                if (d.doc.parentId) _expandedFolders[d.doc.parentId] = true;
+                renderDocTree();
+                // Reload to see file viewer
+                window.location.reload();
+            }).catch(function() { alert('Upload failed'); });
+    });
+}
+
+function uploadNewVersion(docId, file) {
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('file', file);
+    fetch('/projects/' + projectId + '/docs/' + docId + '/upload-version', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) window.location.reload();
+            else alert(d.error || 'Upload failed');
+        });
+}
+
+function convertToDoc(docId) {
+    if (!confirm('Convert this file to a Catalogue document? The file will remain available for download.')) return;
+    fetch('/projects/' + projectId + '/docs/' + docId + '/convert', { method: 'POST', headers: { 'Accept': 'application/json' } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) window.location.reload();
+            else alert(d.error || 'Conversion failed');
+        });
+}
+
+// ── Icon picker ───────────────────────────────────────────────────────────────
+var _iconCategories = {
+    'Document': ['document-text-outline','document-outline','book-outline','newspaper-outline','clipboard-outline','journal-outline','reader-outline','list-outline'],
+    'Media': ['image-outline','film-outline','musical-notes-outline','camera-outline','mic-outline','videocam-outline','play-circle-outline','albums-outline'],
+    'File': ['attach-outline','archive-outline','folder-outline','folder-open-outline','cloud-upload-outline','download-outline','share-outline','copy-outline'],
+    'Creative': ['easel-outline','brush-outline','color-palette-outline','pencil-outline','create-outline','shapes-outline','bulb-outline','telescope-outline'],
+    'Data': ['grid-outline','bar-chart-outline','stats-chart-outline','pie-chart-outline','analytics-outline','calculator-outline','server-outline','layers-outline'],
+    'Label': ['star-outline','heart-outline','bookmark-outline','flag-outline','alert-circle-outline','checkmark-circle-outline','information-circle-outline','help-circle-outline'],
+    'Science': ['flask-outline','telescope-outline','planet-outline','leaf-outline','bug-outline','pulse-outline','cellular-outline','beaker-outline'],
+    'Other': ['code-slash-outline','terminal-outline','git-branch-outline','rocket-outline','globe-outline','map-outline','people-outline','person-outline']
+};
+
+function openIconPicker(docId) {
+    _iconPickerDocId = docId;
+    _iconPickerSelected = null;
+    var content = document.getElementById('iconPickerContent');
+    content.innerHTML = '';
+    Object.keys(_iconCategories).forEach(function(cat) {
+        var catLabel = document.createElement('div');
+        catLabel.className = 'icon-picker-cat';
+        catLabel.textContent = cat;
+        content.appendChild(catLabel);
+        var grid = document.createElement('div');
+        grid.className = 'icon-picker-grid';
+        _iconCategories[cat].forEach(function(iconName) {
+            var item = document.createElement('div');
+            item.className = 'icon-picker-item';
+            item.dataset.icon = iconName;
+            item.innerHTML = '<ion-icon name="' + iconName + '"></ion-icon><span>' + iconName.replace(/-outline$/, '').replace(/-/g, ' ') + '</span>';
+            item.addEventListener('click', function() {
+                content.querySelectorAll('.icon-picker-item.selected').forEach(function(el) { el.classList.remove('selected'); });
+                item.classList.add('selected');
+                _iconPickerSelected = iconName;
+                setDocIcon(docId, iconName);
+                closeModal('iconPickerModal');
+            });
+            grid.appendChild(item);
+        });
+        content.appendChild(grid);
+    });
+    document.getElementById('iconPickerModal').classList.add('open');
+}
+
+function setDocIcon(docId, iconName) {
+    fetch('/projects/' + projectId + '/docs/' + docId + '/icon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ icon: iconName })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+            var doc = _allDocs.find(function(x) { return x._id === docId; });
+            if (doc) { doc.icon = iconName; renderDocTree(); }
+        }
+    });
+}
+
+function confirmIconPick() {
+    // Reset to default (remove custom icon)
+    if (!_iconPickerDocId) return;
+    setDocIcon(_iconPickerDocId, '');
+    closeModal('iconPickerModal');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(function(m) {
+    m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(function(m) { m.classList.remove('open'); });
+});
+
+// ── Panel collapse ─────────────────────────────────────────────────────────────
+function togglePanel(id) { document.getElementById(id).classList.toggle('collapsed'); }
+function toggleImportPanel() {
+    var p = document.getElementById('importPanel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Doc nav ────────────────────────────────────────────────────────────────────
+function switchDoc(id) {
+    _currentDocId = id;
+    document.querySelectorAll('.doc-view').forEach(function(v) { v.style.display = 'none'; });
+    var v = document.getElementById('docview-' + id);
+    if (v) v.style.display = 'block';
+    renderDocTree(); // re-render to update active state
+    updateSectionsNav(id);
+    // Show/hide sections nav for file/folder types
+    var doc = _allDocs.find(function(d) { return d._id === id; });
+    var sectionsNavPanel = document.getElementById('sectionsNav');
+    if (sectionsNavPanel) sectionsNavPanel.style.display = (doc && doc.docType === 'file') ? 'none' : '';
+}
+// Render tree and open first non-folder doc on load
+renderDocTree();
+<% var firstDoc = docs.find(function(d){ return d.docType !== 'folder'; }); %>
+<% if (firstDoc) { %>switchDoc('<%= firstDoc._id %>');<% } %>
+
+function showNewDocForm() { showNewDocModal(); }
+
+// ── Section nav ────────────────────────────────────────────────────────────────
+function updateSectionsNav(docId) {
+    var list = document.getElementById('sectionsNavList');
+    if (!list) return;
+    var docEl = document.getElementById('docview-' + docId);
+    if (!docEl) { list.innerHTML = '<p style="font-size:12px;opacity:0.4;padding:12px;">No doc open</p>'; return; }
+    if (docEl.querySelector('.research-canvas')) {
+        list.innerHTML = '<p style="font-size:12px;opacity:0.4;padding:12px;">Research canvas</p>'; return;
+    }
+    var blocks = docEl.querySelectorAll('.sec-block');
+    var html = '';
+    blocks.forEach(function(b) {
+        var sid = b.dataset.secid;
+        var title = b.querySelector('.sec-block-title').textContent;
+        html += '<div class="sec-nav-item" id="secnav-' + sid + '" onclick="scrollToSection(\'' + sid + '\')">' + title + '</div>';
+    });
+    if (!html) html = '<p style="font-size:12px;opacity:0.4;padding:12px;">No sections yet</p>';
+    html += '<button onclick="showAddSecModal(\'' + docId + '\')" style="display:block;width:100%;padding:7px 12px;font-size:12px;opacity:0.5;background:none;border:none;color:inherit;cursor:pointer;text-align:left;">+ Add Section</button>';
+    list.innerHTML = html;
+}
+
+function scrollToSection(secId) {
+    document.querySelectorAll('.sec-nav-item').forEach(function(n) { n.classList.remove('active'); });
+    var navItem = document.getElementById('secnav-' + secId);
+    if (navItem) navItem.classList.add('active');
+    var sec = document.getElementById('sec-' + secId);
+    if (!sec) return;
+    var body = sec.querySelector('.sec-block-body');
+    if (body && body.classList.contains('hidden')) body.classList.remove('hidden');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── View mode ──────────────────────────────────────────────────────────────────
+function switchViewMode(docId, mode) {
+    var bysec = document.getElementById('bysec-' + docId);
+    var whole = document.getElementById('whole-' + docId);
+    var btnBy = document.getElementById('vmBy-' + docId);
+    var btnWhole = document.getElementById('vmWhole-' + docId);
+    if (!bysec || !whole) return;
+    if (mode === 'whole-doc') {
+        // Sync content from textareas into whole-doc view
+        bysec.querySelectorAll('.sec-block').forEach(function(block) {
+            var sid = block.dataset.secid;
+            var ta = block.querySelector('.section-textarea');
+            var wdEl = document.querySelector('#wdsec-' + sid + ' .whole-doc-content, #wdsec-' + sid + ' .whole-doc-empty');
+            if (ta && wdEl) {
+                if (ta.value.trim()) { wdEl.className = 'whole-doc-content'; wdEl.textContent = ta.value; }
+                else { wdEl.className = 'whole-doc-empty'; wdEl.textContent = 'No content yet.'; }
+            }
+        });
+        bysec.style.display = 'none'; whole.style.display = 'block';
+        if (btnBy) btnBy.classList.remove('active');
+        if (btnWhole) btnWhole.classList.add('active');
+    } else {
+        bysec.style.display = 'block'; whole.style.display = 'none';
+        if (btnBy) btnBy.classList.add('active');
+        if (btnWhole) btnWhole.classList.remove('active');
+    }
+}
+
+// ── Section blocks ─────────────────────────────────────────────────────────────
+function toggleSecBlock(header) {
+    var body = header.nextElementSibling;
+    if (body) body.classList.toggle('hidden');
+}
+
+function toggleOutlinePanel(secId) {
+    var p = document.getElementById('outline-panel-' + secId);
+    if (p) p.classList.toggle('open');
+}
+
+// ── AJAX: Add section ──────────────────────────────────────────────────────────
+function showAddSecModal(docId) {
+    _addSecDocId = docId;
+    document.getElementById('addSecTitle').value = '';
+    document.getElementById('addSecModal').classList.add('open');
+    setTimeout(function() { document.getElementById('addSecTitle').focus(); }, 60);
+}
+
+function submitAddSection() {
+    var title = document.getElementById('addSecTitle').value.trim();
+    if (!title) return;
+    var docId = _addSecDocId;
+    fetch('/projects/' + projectId + '/docs/' + docId + '/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ title: title })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.ok) { if (typeof showToast === 'function') showToast(data.error || 'Failed', 'error'); return; }
+        closeModal('addSecModal');
+        var sec = data.section;
+        var bysec = document.getElementById('bysec-' + docId);
+        if (bysec) {
+            // Remove "no sections" placeholder
+            var noSec = document.getElementById('nosec-' + docId);
+            if (noSec) noSec.remove();
+            // Build block HTML
+            var block = document.createElement('div');
+            block.className = 'sec-block';
+            block.id = 'sec-' + sec._id;
+            block.dataset.secid = sec._id;
+            block.innerHTML =
+                '<div class="sec-block-header" onclick="toggleSecBlock(this)">' +
+                    '<span class="drag-handle" onclick="event.stopPropagation()">⠿</span>' +
+                    '<span class="sec-block-title">' + sec.title + '</span>' +
+                    '<button class="outline-toggle-btn" type="button" onclick="event.stopPropagation(); toggleOutlinePanel(\'' + sec._id + '\')">Outline</button>' +
+                    '<button class="btn-ghost btn-danger" type="button" style="padding:2px 6px;font-size:11px;" onclick="event.stopPropagation(); showDeleteConfirm(\'/projects/' + projectId + '/docs/' + docId + '/sections/' + sec._id + '/delete\',\'Delete this section?\')">✕</button>' +
+                '</div>' +
+                '<div class="sec-block-body">' +
+                    '<textarea class="section-textarea" style="min-height:200px;" placeholder="Write your content here..." ' +
+                        'oninput="autoSave(\'save\',\'' + projectId + '\',\'' + docId + '\',\'' + sec._id + '\',this); updateWordCount(\'' + sec._id + '\',this.value)"></textarea>' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                        '<span class="word-count" id="wc-' + sec._id + '">0 words</span>' +
+                        '<span class="save-indicator" id="si-save-' + sec._id + '"></span>' +
+                    '</div>' +
+                    '<div class="outline-panel" id="outline-panel-' + sec._id + '">' +
+                        '<p style="font-size:11px;opacity:0.5;margin:0 0 5px;">Section Outline</p>' +
+                        '<textarea class="outline-textarea" placeholder="Planning notes..." ' +
+                            'oninput="autoSave(\'outline\',\'' + projectId + '\',\'' + docId + '\',\'' + sec._id + '\',this)"></textarea>' +
+                        '<span class="save-indicator" id="si-outline-' + sec._id + '"></span>' +
+                    '</div>' +
+                '</div>';
+            var addBtn = bysec.querySelector('.add-section-btn');
+            if (addBtn) bysec.insertBefore(block, addBtn);
+            else bysec.appendChild(block);
+            block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            initSectionDragItem(block, docId);
+        }
+        // Add to whole-doc view
+        var whole = document.getElementById('whole-' + docId);
+        if (whole) {
+            var wd = document.createElement('div');
+            wd.className = 'whole-doc-sec'; wd.id = 'wdsec-' + sec._id;
+            wd.innerHTML = '<h3 class="whole-doc-sec-title">' + sec.title + '</h3><p class="whole-doc-empty">No content yet.</p>';
+            whole.appendChild(wd);
+        }
+        updateSectionsNav(docId);
+    }).catch(function() { if (typeof showToast === 'function') showToast('Network error', 'error'); });
+}
+
+// ── AJAX: Add research card ────────────────────────────────────────────────────
+function showAddResCardModal(docId) {
+    _addResDocId = docId;
+    ['arcTitle','arcDesc','arcGroup','arcContent','arcRefLink'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('arcMedia').value = '';
+    document.getElementById('addResCardModal').classList.add('open');
+    setTimeout(function() { document.getElementById('arcTitle').focus(); }, 60);
+}
+
+function submitAddResCard() {
+    var title = document.getElementById('arcTitle').value.trim();
+    if (!title) return;
+    var docId = _addResDocId;
+    var fd = new FormData();
+    fd.append('title', title);
+    fd.append('description', document.getElementById('arcDesc').value);
+    fd.append('group', document.getElementById('arcGroup').value);
+    fd.append('content', document.getElementById('arcContent').value);
+    fd.append('refLink', document.getElementById('arcRefLink').value);
+    var mediaFile = document.getElementById('arcMedia').files[0];
+    if (mediaFile) fd.append('media', mediaFile);
+    fetch('/projects/' + projectId + '/docs/' + docId + '/sections', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.ok) { if (typeof showToast === 'function') showToast('Failed to add card', 'error'); return; }
+        closeModal('addResCardModal');
+        var sec = data.section;
+        var canvas = document.getElementById('resCanvas-' + docId);
+        if (!canvas) return;
+        var idx = canvas.querySelectorAll('.research-card').length;
+        var card = document.createElement('div');
+        card.className = 'research-card';
+        card.id = 'rsec-' + sec._id;
+        card.dataset.id = sec._id; card.dataset.docid = docId; card.dataset.conns = '[]';
+        card.dataset.title = encodeURIComponent(sec.title || '');
+        card.dataset.desc = encodeURIComponent(sec.description || '');
+        card.dataset.group = encodeURIComponent(sec.group || '');
+        card.dataset.content = encodeURIComponent(sec.content || '');
+        card.dataset.reflink = encodeURIComponent(sec.refLink || '');
+        card.dataset.mediaurl = sec.mediaUrl || '';
+        card.style.left = ((idx % 3) * 240 + 20) + 'px';
+        card.style.top = (Math.floor(idx / 3) * 190 + 20) + 'px';
+        var inner = '';
+        if (sec.group) inner += '<span class="rc-group">' + sec.group + '</span>';
+        inner += '<p class="rc-title">' + sec.title + '</p>';
+        if (sec.description) inner += '<p class="rc-desc">' + sec.description + '</p>';
+        if (sec.content) inner += '<p class="rc-content">' + sec.content.substring(0,120) + '</p>';
+        if (sec.refLink) inner += '<p class="rc-reflink">' + sec.refLink + '</p>';
+        if (sec.mediaUrl) inner += '<img class="rc-media" src="' + sec.mediaUrl + '" alt="">';
+        inner += '<div class="rc-actions">' +
+            '<button class="rc-btn rc-connect-btn" type="button" onmousedown="startResConnDrag(event,\'' + sec._id + '\',\'' + docId + '\')">⬤</button>' +
+            '<button class="rc-btn" type="button" onclick="event.stopPropagation();openEditResCard(\'' + sec._id + '\',\'' + docId + '\')">Edit</button>' +
+            '<button class="rc-btn" type="button" onclick="event.stopPropagation();showDeleteConfirm(\'/projects/' + projectId + '/docs/' + docId + '/sections/' + sec._id + '/delete\',\'Delete this card?\')">✕</button>' +
+            '</div>';
+        card.innerHTML = inner;
+        var fab = canvas.querySelector('.res-fab');
+        if (fab) canvas.insertBefore(card, fab); else canvas.appendChild(card);
+        initResCardDrag(card);
+    }).catch(function() { if (typeof showToast === 'function') showToast('Network error', 'error'); });
+}
+
+// ── Auto-save ──────────────────────────────────────────────────────────────────
+var saveTimers = {};
+function autoSave(type, pid, docId, secId, el) {
+    var key = type + '-' + secId;
+    var ind = document.getElementById('si-' + key);
+    if (ind) ind.textContent = 'Saving...';
+    clearTimeout(saveTimers[key]);
+    saveTimers[key] = setTimeout(function() {
+        var body = {};
+        body[type === 'outline' ? 'outline' : 'content'] = el.value;
+        fetch('/projects/' + pid + '/docs/' + docId + '/sections/' + secId + '/' + type, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function(r) {
+            if (ind) { ind.textContent = r.ok ? 'Saved' : 'Error'; setTimeout(function() { if (ind) ind.textContent = ''; }, 2000); }
+        });
+    }, 900);
+}
+
+function updateWordCount(secId, val) {
+    var el = document.getElementById('wc-' + secId);
+    if (!el) return;
+    var words = val.trim() ? val.trim().split(/\s+/).length : 0;
+    el.textContent = words + ' word' + (words !== 1 ? 's' : '') + ' · ' + val.length + ' chars';
+}
+// Init word counts on load
+document.querySelectorAll('.sec-block').forEach(function(block) {
+    var sid = block.dataset.secid;
+    var ta = block.querySelector('.section-textarea');
+    if (ta && sid) updateWordCount(sid, ta.value);
+});
+
+// ── Rename ─────────────────────────────────────────────────────────────────────
+function renameDoc(docId, title) {
+    if (!title.trim()) return;
+    fetch('/projects/' + projectId + '/docs/' + docId + '/rename', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title })
+    }).then(function() {
+        var nn = document.getElementById('navname-' + docId);
+        if (nn) nn.textContent = title;
+    });
+}
+function startRename(e, docId) {
+    e.stopPropagation();
+    var span = e.target, oldName = span.textContent;
+    var inp = document.createElement('input');
+    inp.className = 'rename-input'; inp.value = oldName;
+    span.replaceWith(inp); inp.focus(); inp.select();
+    inp.addEventListener('blur', function() {
+        var newName = inp.value.trim() || oldName;
+        var ns = document.createElement('span');
+        ns.className = 'doc-nav-name'; ns.id = 'navname-' + docId;
+        ns.setAttribute('ondblclick', "startRename(event,'" + docId + "')");
+        ns.title = 'Double-click to rename'; ns.textContent = newName;
+        inp.replaceWith(ns);
+        renameDoc(docId, newName);
+        var ti = document.querySelector('#docview-' + docId + ' .doc-title-edit');
+        if (ti) ti.value = newName;
+    });
+    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') inp.blur(); });
+}
+
+// ── Reference panel ────────────────────────────────────────────────────────────
+function toggleRefPanel() { document.getElementById('refPanel').classList.toggle('open'); }
+
+// ── Version panel ──────────────────────────────────────────────────────────────
+function toggleVersionPanel(docId) {
+    var p = document.getElementById('versionPanel-' + docId);
+    if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+async function restoreVersion(secId, docId, versionIndex) {
+    var r = await fetch('/projects/' + projectId + '/docs/' + docId + '/sections/' + secId + '/versions/restore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ versionIndex: versionIndex })
+    }).then(function(r) { return r.json(); });
+    if (r.ok) {
+        var ta = document.querySelector('#sec-' + secId + ' .section-textarea');
+        if (ta && r.content) { ta.value = r.content; updateWordCount(secId, r.content); }
+        if (typeof showToast === 'function') showToast('Version restored', 'success');
+    }
+}
+
+// ── Delete confirm ─────────────────────────────────────────────────────────────
+function showDeleteConfirm(action, msg) {
+    document.getElementById('deleteConfirmForm').action = action;
+    document.getElementById('deleteConfirmMsg').innerHTML = msg;
+    document.getElementById('deleteConfirmModal').classList.add('open');
+}
+
+// ── Section drag-to-reorder ────────────────────────────────────────────────────
+var _dragSec = null;
+
+function initSectionDragItem(item, docId) {
+    var handle = item.querySelector('.drag-handle');
+    if (!handle || handle._initialized) return;
+    handle._initialized = true;
+    handle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        _dragSec = { item: item, docId: docId, startY: e.clientY };
+        item.classList.add('dragging-sec');
+    });
+}
+
+document.addEventListener('mousemove', function(e) {
+    if (!_dragSec) return;
+    var container = document.getElementById('bysec-' + _dragSec.docId);
+    if (!container) return;
+    var items = Array.from(container.querySelectorAll('.sec-block:not(.dragging-sec)'));
+    items.forEach(function(it) { it.classList.remove('drag-over-sec'); });
+    var closest = null, minDist = Infinity;
+    items.forEach(function(it) {
+        var rect = it.getBoundingClientRect();
+        var dist = Math.abs(e.clientY - rect.top);
+        if (dist < minDist) { minDist = dist; closest = it; }
+    });
+    if (closest) closest.classList.add('drag-over-sec');
+});
+
+document.addEventListener('mouseup', function() {
+    if (!_dragSec) return;
+    var item = _dragSec.item, docId = _dragSec.docId;
+    _dragSec = null;
+    item.classList.remove('dragging-sec');
+    var container = document.getElementById('bysec-' + docId);
+    if (!container) return;
+    var overItem = container.querySelector('.sec-block.drag-over-sec');
+    container.querySelectorAll('.sec-block').forEach(function(it) { it.classList.remove('drag-over-sec'); });
+    if (overItem && overItem !== item) container.insertBefore(item, overItem);
+    var orderedIds = Array.from(container.querySelectorAll('.sec-block')).map(function(it) { return it.dataset.secid; }).filter(Boolean);
+    if (orderedIds.length) {
+        fetch('/projects/' + projectId + '/docs/' + docId + '/sections/reorder', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderedIds: orderedIds })
+        });
+        updateSectionsNav(docId);
+    }
+});
+
+// Init drag on existing blocks
+document.querySelectorAll('.sec-block').forEach(function(block) {
+    var docId = block.closest('.doc-view').id.replace('docview-','');
+    initSectionDragItem(block, docId);
+});
+
+// ── Research canvas drag ───────────────────────────────────────────────────────
+var dragResConn = null;
+
+function initResCardDrag(card) {
+    if (card._dragInit) return;
+    card._dragInit = true;
+    card.addEventListener('mousedown', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'IMG') return;
+        _rDragging = card; _rOffX = e.offsetX; _rOffY = e.offsetY;
+        card.style.zIndex = 10; e.preventDefault();
+    });
+}
+
+var _rDragging = null, _rOffX = 0, _rOffY = 0;
+document.querySelectorAll('.research-card').forEach(initResCardDrag);
+
+window.startResConnDrag = function(e, secId, docId) {
+    e.stopPropagation(); e.preventDefault();
+    dragResConn = { sourceId: secId, docId: docId };
+    var canvas = document.getElementById('resCanvas-' + docId);
+    var center = resCenter(canvas, secId);
+    if (center) {
+        var dl = document.getElementById('resDragLine-' + docId);
+        if (dl) { dl.setAttribute('x1', center.x); dl.setAttribute('y1', center.y); dl.setAttribute('x2', center.x); dl.setAttribute('y2', center.y); dl.setAttribute('visibility', 'visible'); }
+    }
+    e.target.closest('.rc-connect-btn').classList.add('primed');
+};
+
+document.addEventListener('mousemove', function(e) {
+    if (_rDragging) {
+        var canvas = _rDragging.closest('.research-canvas');
+        var rect = canvas.getBoundingClientRect();
+        _rDragging.style.left = (e.clientX - rect.left - _rOffX) + 'px';
+        _rDragging.style.top  = (e.clientY - rect.top  - _rOffY) + 'px';
+        drawResearchLines(_rDragging.dataset.docid);
+    }
+    if (dragResConn) {
+        var canvas = document.getElementById('resCanvas-' + dragResConn.docId);
+        if (!canvas) return;
+        var rect = canvas.getBoundingClientRect();
+        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        var src = canvas.querySelector('[data-id="' + dragResConn.sourceId + '"]');
+        if (src) {
+            var fcx = parseInt(src.style.left) + src.offsetWidth / 2;
+            var fcy = parseInt(src.style.top)  + src.offsetHeight / 2;
+            var dx = mx - fcx, dy = my - fcy;
+            var hw = src.offsetWidth / 2, hh = src.offsetHeight / 2;
+            var scale = (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) ? 0 : Math.min(hw / Math.max(Math.abs(dx),0.001), hh / Math.max(Math.abs(dy),0.001));
+            var dl = document.getElementById('resDragLine-' + dragResConn.docId);
+            if (dl) { dl.setAttribute('x1', fcx+dx*scale); dl.setAttribute('y1', fcy+dy*scale); dl.setAttribute('x2', mx); dl.setAttribute('y2', my); dl.setAttribute('visibility','visible'); }
+        }
+    }
+});
+document.addEventListener('mouseup', function(e) {
+    if (_rDragging) {
+        _rDragging.style.zIndex = 2;
+        var id = _rDragging.dataset.id, docId = _rDragging.dataset.docid;
+        var x = parseInt(_rDragging.style.left) || 0, y = parseInt(_rDragging.style.top) || 0;
+        _rDragging = null;
+        fetch('/projects/' + projectId + '/docs/' + docId + '/sections/' + id + '/position', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ position: x, positionY: y })
+        });
+    }
+    if (dragResConn) {
+        var docId = dragResConn.docId, srcId = dragResConn.sourceId;
+        dragResConn = null;
+        var dl = document.getElementById('resDragLine-' + docId);
+        if (dl) dl.setAttribute('visibility','hidden');
+        document.querySelectorAll('#resCanvas-' + docId + ' .rc-connect-btn').forEach(function(b) { b.classList.remove('primed'); });
+        var target = e.target.closest('.research-card');
+        if (target && target.dataset.id !== srcId && target.dataset.docid === docId) {
+            var tid = target.dataset.id;
+            fetch('/projects/' + projectId + '/docs/' + docId + '/sections/' + srcId + '/connect', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetSectionId: tid })
+            }).then(function() {
+                var srcCard = document.getElementById('rsec-' + srcId);
+                if (srcCard) {
+                    var conns = parseResConns(srcCard.dataset.conns);
+                    if (!conns.find(function(c) { return c.targetId === tid; })) {
+                        conns.push({ targetId: tid, color: '#4a90d9', width: 1.5, lineStyle: 'solid', symbol: 'none', label: '' });
+                        srcCard.dataset.conns = JSON.stringify(conns);
+                    }
+                }
+                drawResearchLines(docId);
+            });
+        } else { drawResearchLines(docId); }
+    }
+});
+
+// ── Research SVG lines ─────────────────────────────────────────────────────────
+function parseResConns(raw) { if (!raw) return []; try { return JSON.parse(raw); } catch(e) { return []; } }
+
+function resCenter(canvas, id) {
+    var el = canvas.querySelector('[data-id="' + id + '"]');
+    if (!el) return null;
+    return { x: parseInt(el.style.left) + el.offsetWidth / 2, y: parseInt(el.style.top) + el.offsetHeight / 2 };
+}
+
+function resEdgePoint(canvas, fromId, toId) {
+    var from = canvas.querySelector('[data-id="' + fromId + '"]');
+    var to   = canvas.querySelector('[data-id="' + toId   + '"]');
+    if (!from || !to) return null;
+    var fx = parseInt(from.style.left) + from.offsetWidth / 2, fy = parseInt(from.style.top) + from.offsetHeight / 2;
+    var tx = parseInt(to.style.left)   + to.offsetWidth   / 2, ty = parseInt(to.style.top)   + to.offsetHeight  / 2;
+    var dx = tx - fx, dy = ty - fy;
+    if (dx === 0 && dy === 0) return { x: fx, y: fy };
+    var hw = from.offsetWidth / 2, hh = from.offsetHeight / 2;
+    var scale = Math.min(hw / Math.max(Math.abs(dx),0.001), hh / Math.max(Math.abs(dy),0.001));
+    return { x: fx + dx * scale, y: fy + dy * scale };
+}
+
+function drawMidSymbol(mx, my, shape, color, size) {
+    if (!shape || shape === 'none') return null;
+    size = size || 7;
+    var NS = 'http://www.w3.org/2000/svg';
+    var el, g;
+    switch(shape) {
+        case 'circle': el = document.createElementNS(NS,'circle'); el.setAttribute('cx',mx); el.setAttribute('cy',my); el.setAttribute('r',size); el.setAttribute('fill',color); break;
+        case 'square': el = document.createElementNS(NS,'rect'); el.setAttribute('x',mx-size); el.setAttribute('y',my-size); el.setAttribute('width',size*2); el.setAttribute('height',size*2); el.setAttribute('fill',color); break;
+        case 'diamond': el = document.createElementNS(NS,'polygon'); el.setAttribute('points',mx+','+(my-size*1.3)+' '+(mx+size)+','+my+' '+mx+','+(my+size*1.3)+' '+(mx-size)+','+my); el.setAttribute('fill',color); break;
+        case 'triangle': el = document.createElementNS(NS,'polygon'); el.setAttribute('points',mx+','+(my-size*1.3)+' '+(mx+size*1.1)+','+(my+size)+' '+(mx-size*1.1)+','+(my+size)); el.setAttribute('fill',color); break;
+        case 'hexagon': { var hpts=[]; for(var hi=0;hi<6;hi++){var ha=Math.PI/180*(60*hi-30); hpts.push((mx+size*Math.cos(ha))+','+(my+size*Math.sin(ha)));} el=document.createElementNS(NS,'polygon'); el.setAttribute('points',hpts.join(' ')); el.setAttribute('fill',color); break; }
+        case 'star': { var spts=[]; for(var si=0;si<10;si++){var sr=si%2===0?size:size*0.45; var sa=Math.PI/180*(36*si-90); spts.push((mx+sr*Math.cos(sa))+','+(my+sr*Math.sin(sa)));} el=document.createElementNS(NS,'polygon'); el.setAttribute('points',spts.join(' ')); el.setAttribute('fill',color); break; }
+        case 'plus': { var pt=size*0.35; el=document.createElementNS(NS,'polygon'); el.setAttribute('points',(mx-pt)+','+(my-size)+' '+(mx+pt)+','+(my-size)+' '+(mx+pt)+','+(my-pt)+' '+(mx+size)+','+(my-pt)+' '+(mx+size)+','+(my+pt)+' '+(mx+pt)+','+(my+pt)+' '+(mx+pt)+','+(my+size)+' '+(mx-pt)+','+(my+size)+' '+(mx-pt)+','+(my+pt)+' '+(mx-size)+','+(my+pt)+' '+(mx-size)+','+(my-pt)+' '+(mx-pt)+','+(my-pt)); el.setAttribute('fill',color); break; }
+        case 'x': { g=document.createElementNS(NS,'g'); var xt=size*0.3; var xp=document.createElementNS(NS,'polygon'); xp.setAttribute('points',(mx-size)+','+(my-xt)+' '+(mx-xt)+','+my+' '+(mx-size)+','+(my+xt)+' '+(mx-xt)+','+(my+size)+' '+mx+','+(my+xt)+' '+(mx+xt)+','+(my+size)+' '+(mx+size)+','+(my+xt)+' '+(mx+xt)+','+my+' '+(mx+size)+','+(my-xt)+' '+(mx+xt)+','+(my-size)+' '+mx+','+(my-xt)+' '+(mx-xt)+','+(my-size)); xp.setAttribute('fill',color); g.appendChild(xp); break; }
+        case 'arrow': { g=document.createElementNS(NS,'g'); var at=document.createElementNS(NS,'polygon'); at.setAttribute('points',mx+','+(my-size*1.1)+' '+(mx+size)+','+(my+size*0.6)+' '+(mx-size)+','+(my+size*0.6)); at.setAttribute('fill',color); g.appendChild(at); break; }
+    }
+    return g || el || null;
+}
+
+function drawResearchLines(docId, preview) {
+    var svg = document.getElementById('researchSvg-' + docId);
+    if (!svg) return;
+    var dragLine = document.getElementById('resDragLine-' + docId);
+    svg.innerHTML = '';
+    var canvas = svg.parentElement;
+    var drawn = new Set();
+    var NS = 'http://www.w3.org/2000/svg';
+    canvas.querySelectorAll('.research-card').forEach(function(card) {
+        var id = card.dataset.id;
+        parseResConns(card.dataset.conns).forEach(function(conn) {
+            var tid = conn.targetId;
+            var key = [id,tid].sort().join('-');
+            if (drawn.has(key)) return; drawn.add(key);
+            var a = resEdgePoint(canvas, id, tid), b = resEdgePoint(canvas, tid, id);
+            if (!a || !b) return;
+            var color = conn.color||'#4a90d9', width = conn.width||1.5, lstyle = conn.lineStyle||'solid', sym = conn.symbol||'none', label = conn.label||'';
+            if (preview && ((preview.srcId===id&&preview.tgtId===tid)||(preview.srcId===tid&&preview.tgtId===id))) {
+                color=preview.color||color; width=parseFloat(preview.width)||width; lstyle=preview.lineStyle||lstyle;
+                sym=preview.symbol!==undefined?preview.symbol:sym; label=preview.label!==undefined?preview.label:label;
+            }
+            var dash = lstyle==='dashed'?'8,5':(lstyle==='dotted'?'2,4':null);
+            var mx2=(a.x+b.x)/2, my2=(a.y+b.y)/2;
+            var line=document.createElementNS(NS,'line');
+            line.setAttribute('x1',a.x); line.setAttribute('y1',a.y); line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+            line.setAttribute('stroke',color); line.setAttribute('stroke-width',width);
+            if (dash) line.setAttribute('stroke-dasharray',dash);
+            svg.appendChild(line);
+            if (sym&&sym!=='none') { var symEl=drawMidSymbol(mx2,my2,sym,color,7); if(symEl) svg.appendChild(symEl); }
+            if (label) {
+                var lblY = my2+(sym&&sym!=='none'?18:-6);
+                var txt=document.createElementNS(NS,'text'); txt.setAttribute('x',mx2); txt.setAttribute('y',lblY); txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','11'); txt.setAttribute('fill',color); txt.textContent=label; svg.appendChild(txt);
+                try { var bb=txt.getBBox(); var bg=document.createElementNS(NS,'rect'); bg.setAttribute('x',bb.x-2); bg.setAttribute('y',bb.y-2); bg.setAttribute('width',bb.width+4); bg.setAttribute('height',bb.height+4); bg.setAttribute('rx','3'); bg.setAttribute('fill','var(--form-bg-color)'); bg.setAttribute('opacity','0.85'); svg.insertBefore(bg,txt); } catch(e){}
+            }
+            var hit=document.createElementNS(NS,'line');
+            hit.setAttribute('x1',a.x); hit.setAttribute('y1',a.y); hit.setAttribute('x2',b.x); hit.setAttribute('y2',b.y);
+            hit.setAttribute('stroke-width','12'); hit.setAttribute('stroke','transparent');
+            hit.style.pointerEvents='all'; hit.style.cursor='pointer';
+            (function(dId,srcId,tgtId){ hit.addEventListener('click',function(ev){ ev.stopPropagation(); openResConnPanel(ev,dId,srcId,tgtId); }); })(docId,id,tid);
+            svg.appendChild(hit);
+        });
+    });
+    if (dragLine) svg.appendChild(dragLine);
+}
+<% docs.forEach(function(doc) { if (doc.isResearch) { %>
+requestAnimationFrame(function() { drawResearchLines('<%= doc._id %>'); });
+<% } }) %>
+
+window.toggleResConnect = function(docId, btn) {};
+
+// ── Research connection panel ──────────────────────────────────────────────────
+var _resConnSel = null;
+function openResConnPanel(e, docId, srcId, tgtId) {
+    e.stopPropagation();
+    _resConnSel = { docId: docId, srcId: srcId, tgtId: tgtId };
+    var srcCard = document.getElementById('rsec-' + srcId);
+    var conns = srcCard ? parseResConns(srcCard.dataset.conns) : [];
+    var conn = conns.find(function(c) { return c.targetId === tgtId; }) || {};
+    document.getElementById('rcpColor').value  = conn.color     || '#4a90d9';
+    document.getElementById('rcpWidth').value  = conn.width     || 1.5;
+    document.getElementById('rcpStyle').value  = conn.lineStyle || 'solid';
+    document.getElementById('rcpSymbol').value = conn.symbol    || 'none';
+    document.getElementById('rcpLabel').value  = conn.label     || '';
+    var panel = document.getElementById('resConnPanel');
+    panel.style.display = 'block';
+    panel.style.left = Math.min(e.clientX+8, window.innerWidth-220) + 'px';
+    panel.style.top  = Math.min(e.clientY+8, window.innerHeight-290) + 'px';
+}
+function closeResConnPanel() { document.getElementById('resConnPanel').style.display='none'; _resConnSel=null; }
+function resConnLivePreview() {
+    if (!_resConnSel) return;
+    drawResearchLines(_resConnSel.docId, { srcId:_resConnSel.srcId, tgtId:_resConnSel.tgtId, color:document.getElementById('rcpColor').value, width:document.getElementById('rcpWidth').value, lineStyle:document.getElementById('rcpStyle').value, symbol:document.getElementById('rcpSymbol').value, label:document.getElementById('rcpLabel').value });
+}
+function saveResConnProps() {
+    if (!_resConnSel) return;
+    var docId=_resConnSel.docId, srcId=_resConnSel.srcId, tgtId=_resConnSel.tgtId;
+    var color=document.getElementById('rcpColor').value, width=parseFloat(document.getElementById('rcpWidth').value), lineStyle=document.getElementById('rcpStyle').value, symbol=document.getElementById('rcpSymbol').value, label=document.getElementById('rcpLabel').value;
+    var srcCard=document.getElementById('rsec-'+srcId);
+    if (srcCard) { var conns=parseResConns(srcCard.dataset.conns); var conn=conns.find(function(c){return c.targetId===tgtId;}); if(conn){conn.color=color;conn.width=width;conn.lineStyle=lineStyle;conn.symbol=symbol;conn.label=label;} srcCard.dataset.conns=JSON.stringify(conns); }
+    fetch('/projects/'+projectId+'/docs/'+docId+'/sections/'+srcId+'/connection/'+tgtId, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({color,width,lineStyle,symbol,label}) });
+    drawResearchLines(docId); closeResConnPanel();
+}
+function disconnectResConn() {
+    if (!_resConnSel) return;
+    var docId=_resConnSel.docId, srcId=_resConnSel.srcId, tgtId=_resConnSel.tgtId;
+    fetch('/projects/'+projectId+'/docs/'+docId+'/sections/'+srcId+'/disconnect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({targetSectionId:tgtId}) }).then(function(){
+        var srcCard=document.getElementById('rsec-'+srcId);
+        if(srcCard){ srcCard.dataset.conns=JSON.stringify(parseResConns(srcCard.dataset.conns).filter(function(c){return c.targetId!==tgtId;})); }
+        drawResearchLines(docId); closeResConnPanel();
+    });
+}
+document.addEventListener('click', function(e) { var p=document.getElementById('resConnPanel'); if(p&&p.style.display!=='none'&&!p.contains(e.target)) closeResConnPanel(); });
+
+// ── Auto-organize ──────────────────────────────────────────────────────────────
+function autoOrganize(docId) {
+    var canvas=document.getElementById('resCanvas-'+docId); if(!canvas) return;
+    var groups={};
+    canvas.querySelectorAll('.research-card').forEach(function(c){ var g=decodeURIComponent(c.dataset.group||'')||'(ungrouped)'; if(!groups[g]) groups[g]=[]; groups[g].push(c); });
+    var colX=20; var colGap=250, rowGap=200, rowStart=20;
+    Object.keys(groups).forEach(function(g){ groups[g].forEach(function(c,i){ c.style.left=colX+'px'; c.style.top=(rowStart+i*rowGap)+'px'; }); colX+=colGap; });
+    drawResearchLines(docId);
+}
+
+// ── Edit research card ─────────────────────────────────────────────────────────
+var _editResId=null, _editResDocId=null;
+window.openEditResCard = function(secId, docId) {
+    _editResId=secId; _editResDocId=docId;
+    var card=document.getElementById('rsec-'+secId);
+    document.getElementById('ercTitle').value   = decodeURIComponent(card.dataset.title   || '');
+    document.getElementById('ercDesc').value    = decodeURIComponent(card.dataset.desc    || '');
+    document.getElementById('ercGroup').value   = decodeURIComponent(card.dataset.group   || '');
+    document.getElementById('ercContent').value = decodeURIComponent(card.dataset.content || '');
+    document.getElementById('ercRefLink').value = decodeURIComponent(card.dataset.reflink || '');
+    document.getElementById('ercMediaForm').action = '/projects/'+projectId+'/docs/'+docId+'/sections/'+secId+'/media';
+    document.getElementById('editResCardModal').classList.add('open');
+};
+window.saveResCard = function() {
+    if (!_editResId) return;
+    var body={title:document.getElementById('ercTitle').value, description:document.getElementById('ercDesc').value, group:document.getElementById('ercGroup').value, content:document.getElementById('ercContent').value, refLink:document.getElementById('ercRefLink').value};
+    fetch('/projects/'+projectId+'/docs/'+_editResDocId+'/sections/'+_editResId+'/meta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(function(r){
+        if(!r.ok) return;
+        var card=document.getElementById('rsec-'+_editResId); if(!card) return;
+        card.dataset.title=encodeURIComponent(body.title); card.dataset.desc=encodeURIComponent(body.description); card.dataset.group=encodeURIComponent(body.group); card.dataset.content=encodeURIComponent(body.content); card.dataset.reflink=encodeURIComponent(body.refLink);
+        card.querySelector('.rc-title').textContent=body.title;
+        var descEl=card.querySelector('.rc-desc'); if(body.description){if(descEl)descEl.textContent=body.description; else{var d=document.createElement('p');d.className='rc-desc';d.textContent=body.description;card.querySelector('.rc-title').after(d);}} else if(descEl) descEl.remove();
+        var cEl=card.querySelector('.rc-content'); if(body.content){if(cEl)cEl.textContent=body.content.substring(0,120); else{var c2=document.createElement('p');c2.className='rc-content';c2.textContent=body.content.substring(0,120);card.querySelector('.rc-actions').before(c2);}} else if(cEl) cEl.remove();
+        var rEl=card.querySelector('.rc-reflink'); if(body.refLink){if(rEl)rEl.textContent=body.refLink; else{var r2=document.createElement('p');r2.className='rc-reflink';r2.textContent=body.refLink;card.querySelector('.rc-actions').before(r2);}} else if(rEl) rEl.remove();
+        var gEl=card.querySelector('.rc-group'); if(body.group){if(gEl)gEl.textContent=body.group; else{var g2=document.createElement('span');g2.className='rc-group';g2.textContent=body.group;card.insertBefore(g2,card.firstChild);}} else if(gEl) gEl.remove();
+        closeModal('editResCardModal');
+    });
+};
+
+// ── Import ─────────────────────────────────────────────────────────────────────
+async function importDoc() {
+    var file=document.getElementById('importFile').files[0];
+    var status=document.getElementById('importStatus');
+    if(!file){status.textContent='Please select a file.'; return;}
+    var ext=file.name.split('.').pop().toLowerCase();
+    var endpoint=(ext==='docx')?'/projects/'+projectId+'/docs/import/docx':'/projects/'+projectId+'/docs/import/md';
+    var form=new FormData(); form.append('file',file);
+    status.textContent='Importing…';
+    try {
+        var res=await fetch(endpoint,{method:'POST',body:form});
+        var data=await res.json();
+        if(res.ok&&data.ok){ status.textContent='Imported! Reloading…'; if(typeof showToast==='function') showToast('Import complete!','success'); setTimeout(function(){window.location.reload();},800); }
+        else { status.textContent='Error: '+(data.error||'Unknown error'); }
+    } catch(e) { status.textContent='Network error.'; }
+}
+
+// Init add-section key shortcut
+document.getElementById('addSecTitle').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); submitAddSection(); } });
+</script>
